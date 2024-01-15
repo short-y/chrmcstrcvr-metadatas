@@ -1,5 +1,6 @@
 """
 Example that shows how to receive updates on discovered chromecasts.
+from https://github.com/home-assistant-libs/pychromecast/blob/master/examples/discovery_example.py
 """
 # pylint: disable=invalid-name
 
