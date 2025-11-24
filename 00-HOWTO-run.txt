@@ -1,0 +1,98 @@
+# How to Run Your Chromecast Internet Radio App
+
+This guide will walk you through setting up and running your custom Chromecast internet radio receiver.
+
+## 1. Setup Your Python Environment
+
+The Python sender script (`play_radio_stream.py`) requires a virtual environment with `pychromecast` and `zeroconf` installed. If you haven't already:
+
+1.  **Create and activate a virtual environment:**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+2.  **Install dependencies:**
+    ```bash
+    pip install pychromecast zeroconf
+    ```
+
+## 2. Host Your Custom Receiver (`receiver.html`)
+
+Your `receiver.html` file needs to be accessible via HTTPS on the internet for your Chromecast to load it.
+
+### Option A: GitHub Pages (Recommended for Permanent Hosting)
+
+This is the easiest and free way to host your receiver long-term.
+
+1.  **Create a new public repository** on GitHub (e.g., `my-chromecast-receiver`).
+2.  **Upload** your `receiver.html` file to the root of this repository.
+3.  Go to your repository's **Settings** tab.
+4.  In the left sidebar, click on **Pages**.
+5.  Under "Source", select the **`main` branch** (or `master` if that's your default) and click **Save**.
+6.  GitHub will provide you with a URL (e.g., `https://yourusername.github.io/my-chromecast-receiver/receiver.html`). This is your **Hosted Receiver URL**.
+
+### Option B: Local Python Server + Ngrok (For Local Development/Testing)
+
+This is useful if you want to test changes quickly without pushing to GitHub, but requires `ngrok` (which you might need to install separately). **Chromecast generally requires HTTPS.**
+
+1.  **Find your local IP address:**
+    ```bash
+    hostname -I
+    # Example output: 192.168.1.50 172.17.0.1
+    # Use the one that corresponds to your local network, e.g., 192.168.1.50
+    ```
+2.  **Start a simple web server** in your project directory (where `receiver.html` is):
+    ```bash
+    python3 -m http.server 8000
+    ```
+3.  **Expose your local server to the internet using ngrok:**
+    ```bash
+    ngrok http 8000
+    ```
+    Ngrok will give you an HTTPS forwarding URL (e.g., `https://xxxx-xx-xxx-xx.ngrok-free.app`). This is your **Hosted Receiver URL**.
+
+## 3. Register Your Application with Google Cast
+
+You need to register your receiver with Google to get an **Application ID (App ID)**. This is a one-time $5 fee for developers.
+
+1.  Go to the [Google Cast SDK Developer Console](https://cast.google.com/publish).
+2.  Sign in with your Google account.
+3.  Click **"Add New Application"**.
+4.  Select **"Custom Receiver"**.
+5.  Enter the **Hosted Receiver URL** you obtained in Step 2 (e.g., from GitHub Pages or Ngrok).
+6.  Follow the prompts to complete the registration.
+7.  Once registered, you will be given an **Application ID** (e.g., `A1B2C3D4`). **Copy this ID**.
+
+## 4. Register Your Chromecast Device for Development (Optional, but Recommended for Testing)
+
+To test your custom receiver before it's officially published, you need to register your specific Chromecast device.
+
+1.  In the [Google Cast SDK Developer Console](https://cast.google.com/publish), navigate to the **"Devices"** section.
+2.  Click **"Add New Device"**.
+3.  Enter your Chromecast's **Serial Number**. (You can find this on the back of the device or in the Google Home app settings).
+4.  **Reboot your Chromecast** after registering it. It may take up to 15 minutes for the registration to take effect.
+
+## 5. Run Your Python Sender Script
+
+Now you can use the `play_radio_stream.py` script to launch your custom receiver and play a radio stream.
+
+1.  **Activate your virtual environment** (if not already active):
+    ```bash
+    source venv/bin/activate
+    ```
+2.  **Find your Chromecast's friendly name** (e.g., "Living Room TV", "Bedroom Speaker").
+3.  **Run the script:**
+    ```bash
+    python3 play_radio_stream.py "Your Chromecast Name" \
+        --url "http://stream.radioparadise.com/aac-128" \
+        --app_id "YOUR_APPLICATION_ID_HERE" \
+        --title "Radio Paradise Main Mix" \
+        --image "https://radioparadise.com/graphics/logo_flat_shadow.png"
+    ```
+    *   Replace `"Your Chromecast Name"` with the actual name of your device.
+    *   Replace `"YOUR_APPLICATION_ID_HERE"` with the App ID you got from the Google Cast Console.
+    *   You can change `--url`, `--title`, and `--image` to point to any other stream and initial metadata.
+
+Your Chromecast should now launch your custom receiver, display the title and image, and play the radio stream!
+
+If the stream provides metadata, your receiver will attempt to display it. For streams that don't provide metadata directly (like many MP3 streams), you can enhance your Python script to fetch metadata from a separate API and send it to the receiver via custom messages.
