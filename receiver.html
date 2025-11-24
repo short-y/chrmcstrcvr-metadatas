@@ -6,14 +6,14 @@
   - Displays metadata (Title/Artist/Image) if provided by the stream (HLS/DASH) or the Sender.
   - Supports manual metadata updates via custom Cast messages.
   - Attempts to poll common Icecast status endpoints for metadata.
-  - [New] Attempts to read embedded ID3 tags using jsmediatags.
+  - Attempts to read embedded ID3 tags using jsmediatags.
+  - [New] On-screen Debug Log.
 -->
 <!DOCTYPE html>
 <html>
 <head>
     <title>Internet Radio Receiver</title>
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
-    <!-- Load jsmediatags for reading ID3 tags from stream -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
     <style>
         body {
@@ -51,7 +51,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.7);
             border-radius: 8px;
             transition: background-image 0.5s ease-in-out;
-            /* Default icon if no image */
             background-image: url('https://www.gstatic.com/images/branding/product/2x/chromecast_64dp.png'); 
             background-repeat: no-repeat;
             background-size: 50%;
@@ -72,6 +71,22 @@
             letter-spacing: 2px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
+        #debug-log {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: scroll;
+            padding: 10px;
+            box-sizing: border-box;
+            z-index: 100;
+            display: none; /* Hidden by default unless needed */
+        }
         cast-media-player {
             display: none; 
         }
@@ -83,24 +98,55 @@
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>
+    
+    <!-- Debug Log Container -->
+    <div id="debug-log"></div>
 
     <cast-media-player></cast-media-player>
 
     <script>
+        // DEBUG LOGGING SETUP
+        const debugEl = document.getElementById('debug-log');
+        // Set to true to see logs on TV
+        const SHOW_DEBUG = true; 
+        
+        if (SHOW_DEBUG) {
+            debugEl.style.display = 'block';
+            const originalLog = console.log;
+            const originalErr = console.error;
+
+            function appendLog(type, args) {
+                const msg = Array.from(args).map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+                const line = document.createElement('div');
+                line.textContent = `[${type}] ${msg}`;
+                if (type === 'ERR') line.style.color = '#ff5555';
+                debugEl.appendChild(line);
+                debugEl.scrollTop = debugEl.scrollHeight;
+            }
+
+            console.log = function() {
+                originalLog.apply(console, arguments);
+                appendLog('LOG', arguments);
+            };
+            console.error = function() {
+                originalErr.apply(console, arguments);
+                appendLog('ERR', arguments);
+            };
+        }
+
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
 
         let pollInterval = null;
 
-        // Helper to update UI
         function updateUI(title, artist, imageUrl) {
+            console.log("Updating UI -> Title:", title, "Artist:", artist);
             const titleEl = document.getElementById('song-title');
             const artistEl = document.getElementById('artist-name');
             const artEl = document.getElementById('album-art');
             const bgEl = document.getElementById('bg-image');
 
-            // Only update if data is present
             if (title && title !== "") titleEl.textContent = title;
             if (artist && artist !== "") artistEl.textContent = artist;
             
@@ -111,7 +157,7 @@
             }
         }
 
-        // Helper: Clean up Artist - Title strings commonly found in Icecast
+        // ... [Icecast and jsmediatags helpers kept same as before] ...
         function parseIcecastString(rawString) {
             if (!rawString) return { title: null, artist: null };
             const parts = rawString.split(' - ');
@@ -121,7 +167,6 @@
             return { title: rawString.trim(), artist: "" };
         }
 
-        // Helper: Attempt to find an Icecast status URL from the stream URL
         function guessIcecastStatusUrl(streamUrl) {
             try {
                 const url = new URL(streamUrl);
@@ -133,7 +178,6 @@
 
         function startIcecastPolling(statusUrl, mountpoint) {
             if (pollInterval) clearInterval(pollInterval);
-            
             console.log("Starting Icecast polling on:", statusUrl);
 
             const fetchMetadata = () => {
@@ -152,29 +196,24 @@
 
                         if (activeSource && activeSource.title) {
                             const { title, artist } = parseIcecastString(activeSource.title);
-                            console.log("Polled Icecast:", title, artist);
                             updateUI(title, artist, null); 
                         }
                     })
-                    .catch(err => console.log("Icecast poll failed (CORS or 404):", err));
+                    .catch(err => console.log("Icecast poll failed:", err));
             };
-
             fetchMetadata(); 
             pollInterval = setInterval(fetchMetadata, 10000); 
         }
 
-        // Helper: Read embedded ID3 tags using jsmediatags
         function readEmbeddedTags(url) {
             console.log("Attempting to read embedded tags from:", url);
-            
             new jsmediatags.Reader(url)
             .setTagsToRead(["title", "artist", "picture"])
             .read({
                 onSuccess: function(tag) {
-                    console.log("jsmediatags found tags:", tag);
+                    console.log("jsmediatags found tags:", tag.tags.title);
                     const tags = tag.tags;
                     let image = null;
-
                     if (tags.picture) {
                         const { data, format } = tags.picture;
                         let base64String = "";
@@ -183,7 +222,6 @@
                         }
                         image = `data:${format};base64,${window.btoa(base64String)}`;
                     }
-
                     updateUI(tags.title, tags.artist, image);
                 },
                 onError: function(error) {
@@ -192,7 +230,6 @@
             });
         }
 
-        // 1. Listen for standard Metadata changes (HLS/DASH/ID3)
         playerManager.addEventListener(
             cast.framework.events.EventType.MEDIA_STATUS,
             (event) => {
@@ -206,17 +243,13 @@
             }
         );
 
-        // 2. Intercept Load
         playerManager.setMessageInterceptor(
             cast.framework.messages.MessageType.LOAD,
             request => {
+                console.log("LOAD Request:", request);
                 if (request.media && request.media.contentId) {
                     const streamUrl = request.media.contentId;
-                    
-                    // Strategy A: Try to read ID3 tags immediately (Good for MP3/AAC files)
                     readEmbeddedTags(streamUrl);
-
-                    // Strategy B: Try to poll Icecast status (Good for Streams)
                     const statusUrl = guessIcecastStatusUrl(streamUrl);
                     if (statusUrl) {
                         let mountpoint = null;
@@ -231,14 +264,21 @@
             }
         );
 
-        // 3. Support Custom Messages
+        // CUSTOM MESSAGE LISTENER
+        console.log("Registering Custom Message Listener for:", NAMESPACE);
         context.addCustomMessageListener(NAMESPACE, (event) => {
-            console.log("Received custom update:", event.data);
-            const data = event.data;
-            updateUI(data.title, data.artist, data.image);
+            console.log("Received custom update EVENT:", event);
+            if (event.data) {
+                 const data = event.data;
+                 console.log("Custom Data Content:", data);
+                 updateUI(data.title, data.artist, data.image);
+            } else {
+                 console.error("Custom event received but no data property found.");
+            }
         });
 
         context.start();
+        console.log("Receiver Context Started");
     </script>
 </body>
 </html>

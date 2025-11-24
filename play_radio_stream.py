@@ -4,6 +4,9 @@ import time
 import logging
 import requests
 import pychromecast
+import threading
+import struct
+import json
 
 # Default Stream (Radio Paradise Main Mix)
 DEFAULT_STREAM_URL = "http://stream.radioparadise.com/aac-128"
@@ -11,6 +14,8 @@ DEFAULT_STREAM_TYPE = "audio/mp4" # or audio/mpeg
 DEFAULT_IMAGE_URL = "https://radioparadise.com/graphics/logo_flat_shadow.png"
 DEFAULT_TITLE = "Radio Paradise"
 DEFAULT_SUBTITLE = "Internet Radio"
+
+NAMESPACE = 'urn:x-cast:com.example.radio'
 
 def resolve_playlist(url):
     """
@@ -54,6 +59,93 @@ def resolve_playlist(url):
         print("Using original URL.")
     
     return url
+
+def metadata_monitor(stream_url, cast, stop_event):
+    """
+    Connects to the stream in a separate thread, reads interleaved metadata,
+    and pushes updates to the Chromecast receiver.
+    """
+    print(f"Metadata Monitor: Connecting to {stream_url}")
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (compatible; IcecastMetadataReader/1.0)',
+        'Icy-MetaData': '1'
+    }
+    
+    current_raw_title = None
+    
+    while not stop_event.is_set():
+        try:
+            with requests.get(stream_url, headers=headers, stream=True, timeout=10) as r:
+                # Check for Icy-MetaInt
+                metaint = int(r.headers.get('icy-metaint', -1))
+                
+                if metaint == -1:
+                    print("Metadata Monitor: No Icy-MetaInt header found. Stream does not support interleaved metadata.")
+                    return
+
+                print(f"Metadata Monitor: Connected. Interval: {metaint} bytes.")
+                
+                while not stop_event.is_set():
+                    # Read audio chunk (discard)
+                    # Read in loop to handle stop_event responsively
+                    bytes_to_read = metaint
+                    while bytes_to_read > 0:
+                        if stop_event.is_set(): return
+                        # Read small chunks to avoid blocking forever
+                        chunk_size = min(bytes_to_read, 8192) 
+                        chunk = r.raw.read(chunk_size)
+                        if not chunk:
+                            raise Exception("Stream ended")
+                        bytes_to_read -= len(chunk)
+                    
+                    # Read metadata length
+                    len_byte = r.raw.read(1)
+                    if not len_byte:
+                        raise Exception("Stream ended")
+                    
+                    length = struct.unpack('B', len_byte)[0] * 16
+                    
+                    if length > 0:
+                        meta_data = r.raw.read(length)
+                        meta_str = meta_data.decode('utf-8', errors='ignore')
+                        
+                        # Parse StreamTitle='...';
+                        if "StreamTitle=" in meta_str:
+                            try:
+                                raw_title_part = meta_str.split("StreamTitle=")[1].split(';')[0].strip("'")
+                                
+                                if raw_title_part != current_raw_title:
+                                    print(f"Metadata Monitor: New Track -> {raw_title_part}")
+                                    current_raw_title = raw_title_part
+                                    
+                                    # Try to split Artist - Title
+                                    artist = ""
+                                    title = raw_title_part
+                                    if " - " in raw_title_part:
+                                        parts = raw_title_part.split(" - ", 1)
+                                        artist = parts[0].strip()
+                                        title = parts[1].strip()
+                                    
+                                    msg = {
+                                        "title": title,
+                                        "artist": artist,
+                                        # "image": "" # We could fetch an image from an API if we wanted
+                                    }
+                                    
+                                    try:
+                                        cast.socket_client.send_platform_message(NAMESPACE, msg)
+                                    except Exception as e:
+                                        print(f"Metadata Monitor: Send failed: {e}")
+                                        
+                            except IndexError:
+                                pass
+                    
+        except Exception as e:
+            # Only print error if not stopping
+            if not stop_event.is_set():
+                print(f"Metadata Monitor Connection Lost: {e}")
+                print("Reconnecting in 5 seconds...")
+                time.sleep(5)
 
 def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None):
     print(f"Searching for Chromecast: {device_name}...")
@@ -109,15 +201,23 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     mc.block_until_active()
     print("Playback started!")
     
+    # Start Metadata Monitor
+    stop_event = threading.Event()
+    monitor_thread = threading.Thread(target=metadata_monitor, args=(stream_url, cast, stop_event))
+    monitor_thread.daemon = True
+    monitor_thread.start()
+    
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         print("Stopping...")
+        stop_event.set()
         # mc.stop() # Uncomment if you want to stop playback on exit
         if app_id:
              cast.quit_app()
         browser.stop_discovery()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play an internet radio stream on Chromecast.")
