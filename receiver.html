@@ -7,7 +7,7 @@
   - Supports manual metadata updates via custom Cast messages.
   - Attempts to poll common Icecast status endpoints for metadata.
   - Attempts to read embedded ID3 tags using jsmediatags.
-  - [New] On-screen Debug Log.
+  - [New] On-screen Debug Log (Robust).
 -->
 <!DOCTYPE html>
 <html>
@@ -71,6 +71,13 @@
             letter-spacing: 2px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
+        #version-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #555;
+            font-size: 0.8em;
+        }
         #debug-log {
             position: absolute;
             bottom: 0;
@@ -84,8 +91,8 @@
             overflow-y: scroll;
             padding: 10px;
             box-sizing: border-box;
-            z-index: 100;
-            display: none; /* Hidden by default unless needed */
+            z-index: 9999; /* Ultra high z-index */
+            display: block; /* Visible by default for debugging */
         }
         cast-media-player {
             display: none; 
@@ -95,44 +102,53 @@
 <body>
 
     <div id="bg-image"></div>
+    <div id="version-tag">v2.1 (Debug)</div>
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>
     
     <!-- Debug Log Container -->
-    <div id="debug-log"></div>
+    <div id="debug-log">Waiting for logs...</div>
 
     <cast-media-player></cast-media-player>
 
     <script>
-        // DEBUG LOGGING SETUP
+        // --- ROBUST DEBUG SETUP (Running Immediately) ---
         const debugEl = document.getElementById('debug-log');
-        // Set to true to see logs on TV
-        const SHOW_DEBUG = true; 
         
-        if (SHOW_DEBUG) {
-            debugEl.style.display = 'block';
-            const originalLog = console.log;
-            const originalErr = console.error;
-
-            function appendLog(type, args) {
-                const msg = Array.from(args).map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+        function appendLog(type, args) {
+            try {
+                const msg = Array.from(args).map(a => {
+                    if (typeof a === 'object') {
+                        try { return JSON.stringify(a); } catch(e) { return '[Object]'; }
+                    }
+                    return String(a);
+                }).join(' ');
+                
                 const line = document.createElement('div');
                 line.textContent = `[${type}] ${msg}`;
-                if (type === 'ERR') line.style.color = '#ff5555';
+                if (type === 'ERR' || type === 'GLOBAL_ERR') line.style.color = '#ff5555';
                 debugEl.appendChild(line);
                 debugEl.scrollTop = debugEl.scrollHeight;
+            } catch(e) {
+                // Failsafe
             }
-
-            console.log = function() {
-                originalLog.apply(console, arguments);
-                appendLog('LOG', arguments);
-            };
-            console.error = function() {
-                originalErr.apply(console, arguments);
-                appendLog('ERR', arguments);
-            };
         }
+
+        // 1. Catch Global Errors (Syntax, Network, etc.)
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            appendLog('GLOBAL_ERR', [msg, url, lineNo, error]);
+            return false;
+        };
+
+        // 2. Override Console
+        const originalLog = console.log;
+        const originalErr = console.error;
+        console.log = function() { originalLog.apply(console, arguments); appendLog('LOG', arguments); };
+        console.error = function() { originalErr.apply(console, arguments); appendLog('ERR', arguments); };
+        
+        console.log("Debug Logger Initialized. Version 2.1 loaded.");
+        // -----------------------------------------------
 
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
@@ -157,7 +173,7 @@
             }
         }
 
-        // ... [Icecast and jsmediatags helpers kept same as before] ...
+        // ... [Helpers] ...
         function parseIcecastString(rawString) {
             if (!rawString) return { title: null, artist: null };
             const parts = rawString.split(' - ');
@@ -196,6 +212,7 @@
 
                         if (activeSource && activeSource.title) {
                             const { title, artist } = parseIcecastString(activeSource.title);
+                            console.log("Polled Icecast:", title, artist);
                             updateUI(title, artist, null); 
                         }
                     })
@@ -207,29 +224,38 @@
 
         function readEmbeddedTags(url) {
             console.log("Attempting to read embedded tags from:", url);
-            new jsmediatags.Reader(url)
-            .setTagsToRead(["title", "artist", "picture"])
-            .read({
-                onSuccess: function(tag) {
-                    console.log("jsmediatags found tags:", tag.tags.title);
-                    const tags = tag.tags;
-                    let image = null;
-                    if (tags.picture) {
-                        const { data, format } = tags.picture;
-                        let base64String = "";
-                        for (let i = 0; i < data.length; i++) {
-                            base64String += String.fromCharCode(data[i]);
-                        }
-                        image = `data:${format};base64,${window.btoa(base64String)}`;
-                    }
-                    updateUI(tags.title, tags.artist, image);
-                },
-                onError: function(error) {
-                    console.log("jsmediatags error:", error.type, error.info);
+            try {
+                if (typeof jsmediatags === 'undefined') {
+                     console.error("jsmediatags library failed to load!");
+                     return;
                 }
-            });
+                new jsmediatags.Reader(url)
+                .setTagsToRead(["title", "artist", "picture"])
+                .read({
+                    onSuccess: function(tag) {
+                        console.log("jsmediatags found tags:", tag.tags.title);
+                        const tags = tag.tags;
+                        let image = null;
+                        if (tags.picture) {
+                            const { data, format } = tags.picture;
+                            let base64String = "";
+                            for (let i = 0; i < data.length; i++) {
+                                base64String += String.fromCharCode(data[i]);
+                            }
+                            image = `data:${format};base64,${window.btoa(base64String)}`;
+                        }
+                        updateUI(tags.title, tags.artist, image);
+                    },
+                    onError: function(error) {
+                        console.log("jsmediatags error:", error.type, error.info);
+                    }
+                });
+            } catch(e) {
+                console.error("Error initializing jsmediatags:", e);
+            }
         }
 
+        // Events
         playerManager.addEventListener(
             cast.framework.events.EventType.MEDIA_STATUS,
             (event) => {
@@ -270,10 +296,7 @@
             console.log("Received custom update EVENT:", event);
             if (event.data) {
                  const data = event.data;
-                 console.log("Custom Data Content:", data);
                  updateUI(data.title, data.artist, data.image);
-            } else {
-                 console.error("Custom event received but no data property found.");
             }
         });
 
