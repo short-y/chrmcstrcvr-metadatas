@@ -4,6 +4,7 @@ import time
 import logging
 import requests
 import pychromecast
+from pychromecast.controllers import BaseController
 import threading
 import struct
 import json
@@ -16,6 +17,24 @@ DEFAULT_TITLE = "Radio Paradise"
 DEFAULT_SUBTITLE = "Internet Radio"
 
 NAMESPACE = 'urn:x-cast:com.example.radio'
+
+class RadioController(BaseController):
+    """
+    Controller to send custom messages to the receiver.
+    """
+    def __init__(self):
+        super(RadioController, self).__init__(NAMESPACE)
+
+    def send_track_update(self, title, artist, image_url=None):
+        """Sends a track update message to the receiver."""
+        msg = {
+            "title": title,
+            "artist": artist,
+            "image": image_url
+        }
+        print(f"RadioController: Sending update -> {title} / {artist}")
+        self.send_message(msg)
+
 
 def resolve_playlist(url):
     """
@@ -60,7 +79,7 @@ def resolve_playlist(url):
     
     return url
 
-def metadata_monitor(stream_url, cast, stop_event):
+def metadata_monitor(stream_url, controller, stop_event):
     """
     Connects to the stream in a separate thread, reads interleaved metadata,
     and pushes updates to the Chromecast receiver.
@@ -126,14 +145,8 @@ def metadata_monitor(stream_url, cast, stop_event):
                                         artist = parts[0].strip()
                                         title = parts[1].strip()
                                     
-                                    msg = {
-                                        "title": title,
-                                        "artist": artist,
-                                        # "image": "" # We could fetch an image from an API if we wanted
-                                    }
-                                    
                                     try:
-                                        cast.socket_client.send_platform_message(NAMESPACE, msg)
+                                        controller.send_track_update(title, artist)
                                     except Exception as e:
                                         print(f"Metadata Monitor: Send failed: {e}")
                                         
@@ -165,6 +178,10 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     cast = chromecasts[0]
     cast.wait()
     print(f"Connected to {cast.name}!")
+
+    # Register Custom Controller
+    radio_controller = RadioController()
+    cast.register_handler(radio_controller)
 
     mc = cast.media_controller
     
@@ -203,7 +220,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     
     # Start Metadata Monitor
     stop_event = threading.Event()
-    monitor_thread = threading.Thread(target=metadata_monitor, args=(stream_url, cast, stop_event))
+    monitor_thread = threading.Thread(target=metadata_monitor, args=(stream_url, radio_controller, stop_event))
     monitor_thread.daemon = True
     monitor_thread.start()
     
@@ -217,6 +234,25 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         if app_id:
              cast.quit_app()
         browser.stop_discovery()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Play an internet radio stream on Chromecast.")
+    parser.add_argument("device_name", help="The friendly name of the Chromecast (e.g., 'Living Room TV')")
+    parser.add_argument("--url", default=DEFAULT_STREAM_URL, help="Stream URL")
+    parser.add_argument("--title", default=DEFAULT_TITLE, help="Display Title")
+    parser.add_argument("--image", default=DEFAULT_IMAGE_URL, help="Display Image URL")
+    parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    
+    args = parser.parse_args()
+    
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    
+    # Resolve playlist if necessary
+    final_url = resolve_playlist(args.url)
+    
+    play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id)
 
 
 if __name__ == "__main__":
