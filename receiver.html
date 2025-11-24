@@ -5,12 +5,16 @@
   - Plays any stream sent by the sender.
   - Displays metadata (Title/Artist/Image) if provided by the stream (HLS/DASH) or the Sender.
   - Supports manual metadata updates via custom Cast messages.
+  - Attempts to poll common Icecast status endpoints for metadata.
+  - [New] Attempts to read embedded ID3 tags using jsmediatags.
 -->
 <!DOCTYPE html>
 <html>
 <head>
     <title>Internet Radio Receiver</title>
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+    <!-- Load jsmediatags for reading ID3 tags from stream -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
     <style>
         body {
             background-color: #121212;
@@ -87,6 +91,8 @@
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
 
+        let pollInterval = null;
+
         // Helper to update UI
         function updateUI(title, artist, imageUrl) {
             const titleEl = document.getElementById('song-title');
@@ -94,35 +100,138 @@
             const artEl = document.getElementById('album-art');
             const bgEl = document.getElementById('bg-image');
 
-            if (title) titleEl.textContent = title;
-            if (artist) artistEl.textContent = artist;
+            // Only update if data is present
+            if (title && title !== "") titleEl.textContent = title;
+            if (artist && artist !== "") artistEl.textContent = artist;
             
             if (imageUrl) {
                 artEl.style.backgroundImage = `url('${imageUrl}')`;
-                artEl.style.backgroundSize = 'cover'; // Ensure cover mode is back if we reset it
+                artEl.style.backgroundSize = 'cover'; 
                 bgEl.style.backgroundImage = `url('${imageUrl}')`;
             }
         }
 
-        // 1. Listen for standard Metadata changes from the Player 
-        // (This handles ID3 tags or Load Request metadata)
+        // Helper: Clean up Artist - Title strings commonly found in Icecast
+        function parseIcecastString(rawString) {
+            if (!rawString) return { title: null, artist: null };
+            const parts = rawString.split(' - ');
+            if (parts.length >= 2) {
+                return { artist: parts[0].trim(), title: parts.slice(1).join(' - ').trim() };
+            }
+            return { title: rawString.trim(), artist: "" };
+        }
+
+        // Helper: Attempt to find an Icecast status URL from the stream URL
+        function guessIcecastStatusUrl(streamUrl) {
+            try {
+                const url = new URL(streamUrl);
+                return `${url.protocol}//${url.host}/status-json.xsl`;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function startIcecastPolling(statusUrl, mountpoint) {
+            if (pollInterval) clearInterval(pollInterval);
+            
+            console.log("Starting Icecast polling on:", statusUrl);
+
+            const fetchMetadata = () => {
+                fetch(statusUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                        let sources = data.icestats && data.icestats.source;
+                        if (!sources) return;
+                        if (!Array.isArray(sources)) sources = [sources];
+
+                        let activeSource = null;
+                        if (mountpoint) {
+                            activeSource = sources.find(s => s.listenurl && s.listenurl.endsWith(mountpoint));
+                        }
+                        if (!activeSource && sources.length > 0) activeSource = sources[0];
+
+                        if (activeSource && activeSource.title) {
+                            const { title, artist } = parseIcecastString(activeSource.title);
+                            console.log("Polled Icecast:", title, artist);
+                            updateUI(title, artist, null); 
+                        }
+                    })
+                    .catch(err => console.log("Icecast poll failed (CORS or 404):", err));
+            };
+
+            fetchMetadata(); 
+            pollInterval = setInterval(fetchMetadata, 10000); 
+        }
+
+        // Helper: Read embedded ID3 tags using jsmediatags
+        function readEmbeddedTags(url) {
+            console.log("Attempting to read embedded tags from:", url);
+            
+            new jsmediatags.Reader(url)
+            .setTagsToRead(["title", "artist", "picture"])
+            .read({
+                onSuccess: function(tag) {
+                    console.log("jsmediatags found tags:", tag);
+                    const tags = tag.tags;
+                    let image = null;
+
+                    if (tags.picture) {
+                        const { data, format } = tags.picture;
+                        let base64String = "";
+                        for (let i = 0; i < data.length; i++) {
+                            base64String += String.fromCharCode(data[i]);
+                        }
+                        image = `data:${format};base64,${window.btoa(base64String)}`;
+                    }
+
+                    updateUI(tags.title, tags.artist, image);
+                },
+                onError: function(error) {
+                    console.log("jsmediatags error:", error.type, error.info);
+                }
+            });
+        }
+
+        // 1. Listen for standard Metadata changes (HLS/DASH/ID3)
         playerManager.addEventListener(
             cast.framework.events.EventType.MEDIA_STATUS,
             (event) => {
                 if (event.mediaStatus && event.mediaStatus.media && event.mediaStatus.media.metadata) {
                     const meta = event.mediaStatus.media.metadata;
-                    const title = meta.title;
-                    const artist = meta.artist || meta.subtitle;
-                    const image = (meta.images && meta.images.length > 0) ? meta.images[0].url : null;
-                    
-                    console.log("Media Status Metadata Update:", title, artist);
-                    updateUI(title, artist, image);
+                    if (meta.title) {
+                         console.log("Native Metadata Update:", meta.title);
+                         updateUI(meta.title, meta.artist || meta.subtitle, (meta.images && meta.images[0]) ? meta.images[0].url : null);
+                    }
                 }
             }
         );
 
-        // 2. Support Custom Messages for manual updates from Sender
-        // Sender can send JSON: { "title": "...", "artist": "...", "image": "..." }
+        // 2. Intercept Load
+        playerManager.setMessageInterceptor(
+            cast.framework.messages.MessageType.LOAD,
+            request => {
+                if (request.media && request.media.contentId) {
+                    const streamUrl = request.media.contentId;
+                    
+                    // Strategy A: Try to read ID3 tags immediately (Good for MP3/AAC files)
+                    readEmbeddedTags(streamUrl);
+
+                    // Strategy B: Try to poll Icecast status (Good for Streams)
+                    const statusUrl = guessIcecastStatusUrl(streamUrl);
+                    if (statusUrl) {
+                        let mountpoint = null;
+                        try {
+                            const u = new URL(streamUrl);
+                            mountpoint = u.pathname;
+                        } catch(e) {}
+                        startIcecastPolling(statusUrl, mountpoint);
+                    }
+                }
+                return request;
+            }
+        );
+
+        // 3. Support Custom Messages
         context.addCustomMessageListener(NAMESPACE, (event) => {
             console.log("Received custom update:", event.data);
             const data = event.data;

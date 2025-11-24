@@ -1,6 +1,8 @@
 import argparse
 import sys
 import time
+import logging
+import requests
 import pychromecast
 
 # Default Stream (Radio Paradise Main Mix)
@@ -9,6 +11,49 @@ DEFAULT_STREAM_TYPE = "audio/mp4" # or audio/mpeg
 DEFAULT_IMAGE_URL = "https://radioparadise.com/graphics/logo_flat_shadow.png"
 DEFAULT_TITLE = "Radio Paradise"
 DEFAULT_SUBTITLE = "Internet Radio"
+
+def resolve_playlist(url):
+    """
+    If the URL looks like a playlist (.m3u, .pls), try to fetch it 
+    and extract the actual stream URL.
+    Excludes .m3u8 as those are usually HLS streams handled natively by the player.
+    """
+    lower_url = url.lower()
+    if not (lower_url.endswith('.m3u') or lower_url.endswith('.pls')):
+        return url
+        
+    print(f"Resolving playlist URL: {url}")
+    try:
+        # Fake a user agent, some radios block generic python/requests
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        content = response.text
+        
+        # Parse line by line
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            # PLS format: File1=http://...
+            if lower_url.endswith('.pls') and line.lower().startswith('file'):
+                if '=' in line:
+                    parts = line.split('=', 1)
+                    if parts[1].lower().startswith('http'):
+                        print(f"Found stream URL in PLS: {parts[1]}")
+                        return parts[1].strip()
+
+            # M3U format: just the URL
+            if line.lower().startswith('http'):
+                 print(f"Found stream URL in M3U: {line}")
+                 return line
+                 
+    except Exception as e:
+        print(f"Warning: Failed to resolve playlist: {e}")
+        print("Using original URL.")
+    
+    return url
 
 def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None):
     print(f"Searching for Chromecast: {device_name}...")
@@ -44,7 +89,16 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     # Launch Default Media Receiver and play
     if app_id:
         print(f"Launching Custom App ID: {app_id}")
-        cast.start_app(app_id) # Custom Receiver
+        try:
+            cast.start_app(app_id) # Custom Receiver
+        except pychromecast.error.RequestFailed:
+            print(f"Error: Failed to launch App ID {app_id}.")
+            print("Possible causes:")
+            print("1. The App ID is incorrect.")
+            print("2. The Chromecast device is not registered for development (if the App is unpublished).")
+            print("3. The Chromecast has not been rebooted since registering the device serial number.")
+            print("4. The App ID was created very recently and hasn't propagated to the device yet.")
+            sys.exit(1)
     else:
         print("Launching Default Media Receiver")
         # Default Media Receiver is launched automatically by play_media if no app is running
@@ -72,7 +126,14 @@ if __name__ == "__main__":
     parser.add_argument("--title", default=DEFAULT_TITLE, help="Display Title")
     parser.add_argument("--image", default=DEFAULT_IMAGE_URL, help="Display Image URL")
     parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     
     args = parser.parse_args()
     
-    play_radio(args.device_name, args.url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id)
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    
+    # Resolve playlist if necessary
+    final_url = resolve_playlist(args.url)
+    
+    play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id)
