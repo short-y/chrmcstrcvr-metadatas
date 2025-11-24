@@ -1,0 +1,135 @@
+<!-- 
+  Generic Internet Radio Receiver
+  
+  Features:
+  - Plays any stream sent by the sender.
+  - Displays metadata (Title/Artist/Image) if provided by the stream (HLS/DASH) or the Sender.
+  - Supports manual metadata updates via custom Cast messages.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Internet Radio Receiver</title>
+    <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Google Sans', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        #bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            filter: blur(20px);
+            z-index: -1;
+            transition: background-image 1s ease-in-out;
+        }
+        #album-art {
+            width: 350px;
+            height: 350px;
+            background-color: #333;
+            margin-bottom: 30px;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            border-radius: 8px;
+            transition: background-image 0.5s ease-in-out;
+            /* Default icon if no image */
+            background-image: url('https://www.gstatic.com/images/branding/product/2x/chromecast_64dp.png'); 
+            background-repeat: no-repeat;
+            background-size: 50%;
+        }
+        #song-title {
+            font-size: 3em;
+            font-weight: 300;
+            margin: 0 20px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #artist-name {
+            font-size: 1.8em;
+            color: #cccccc;
+            margin-top: 15px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        cast-media-player {
+            display: none; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bg-image"></div>
+    <div id="album-art"></div>
+    <div id="song-title">Ready to Cast</div>
+    <div id="artist-name"></div>
+
+    <cast-media-player></cast-media-player>
+
+    <script>
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = context.getPlayerManager();
+        const NAMESPACE = 'urn:x-cast:com.example.radio';
+
+        // Helper to update UI
+        function updateUI(title, artist, imageUrl) {
+            const titleEl = document.getElementById('song-title');
+            const artistEl = document.getElementById('artist-name');
+            const artEl = document.getElementById('album-art');
+            const bgEl = document.getElementById('bg-image');
+
+            if (title) titleEl.textContent = title;
+            if (artist) artistEl.textContent = artist;
+            
+            if (imageUrl) {
+                artEl.style.backgroundImage = `url('${imageUrl}')`;
+                artEl.style.backgroundSize = 'cover'; // Ensure cover mode is back if we reset it
+                bgEl.style.backgroundImage = `url('${imageUrl}')`;
+            }
+        }
+
+        // 1. Listen for standard Metadata changes from the Player 
+        // (This handles ID3 tags or Load Request metadata)
+        playerManager.addEventListener(
+            cast.framework.events.EventType.MEDIA_STATUS,
+            (event) => {
+                if (event.mediaStatus && event.mediaStatus.media && event.mediaStatus.media.metadata) {
+                    const meta = event.mediaStatus.media.metadata;
+                    const title = meta.title;
+                    const artist = meta.artist || meta.subtitle;
+                    const image = (meta.images && meta.images.length > 0) ? meta.images[0].url : null;
+                    
+                    console.log("Media Status Metadata Update:", title, artist);
+                    updateUI(title, artist, image);
+                }
+            }
+        );
+
+        // 2. Support Custom Messages for manual updates from Sender
+        // Sender can send JSON: { "title": "...", "artist": "...", "image": "..." }
+        context.addCustomMessageListener(NAMESPACE, (event) => {
+            console.log("Received custom update:", event.data);
+            const data = event.data;
+            updateUI(data.title, data.artist, data.image);
+        });
+
+        context.start();
+    </script>
+</body>
+</html>
