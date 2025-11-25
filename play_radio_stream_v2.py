@@ -310,13 +310,20 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             last_artist_name = None
             
             while True:
-                # Check if app is still running
+                # Force a status update to ensure we know what app is running
+                try:
+                    cast.socket_client.receiver_controller.update_status()
+                except Exception as e:
+                    logging.debug(f"Failed to update status: {e}")
+
+                # Check if app is still running and connection is alive
                 if not cast.socket_client.is_connected:
                     logging.warning("Chromecast connection lost.")
                     break
                 
-                # Note: cast.status might not update instantly, but we can try to update it
-                # cast.update_status() # We removed this earlier as it crashed, trust socket connection for now
+                if cast.status and cast.status.app_id != app_id:
+                    logging.warning(f"App ID changed to {cast.status.app_id} (expected {app_id}). Relaunching...")
+                    break
                 
                 song_title, artist_name, fetched_image_url, album_name, track_time = scrape_kozt_now_playing()
                 
@@ -349,9 +356,19 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             monitor_thread.start()
             
             while True:
+                try:
+                    cast.socket_client.receiver_controller.update_status()
+                except Exception:
+                    pass
+
                 if not cast.socket_client.is_connected:
                     logging.warning("Chromecast connection lost.")
                     break
+                
+                if cast.status and cast.status.app_id != app_id:
+                    logging.warning(f"App ID changed to {cast.status.app_id}. Relaunching...")
+                    break
+
                 time.sleep(1)
 
     except KeyboardInterrupt:
