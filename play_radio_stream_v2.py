@@ -378,6 +378,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         if app_id:
              cast.quit_app()
         browser.stop_discovery()
+        raise # Re-raise to stop the outer loop
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Play an internet radio stream on Chromecast.")
