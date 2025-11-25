@@ -91,15 +91,35 @@
             position: relative;
             z-index: 10;
         }
+        #album-name {
+            font-size: 2.5vw;
+            color: #ccc;
+            margin-top: 0.5vh;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 10;
+        }
+        #track-time {
+            font-size: 2vw;
+            color: #aaa;
+            margin-top: 0.5vh;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
 
     <div id="bg-image"></div>
-    <div id="version-tag">v4.0 (Final)</div>
+    <div id="version-tag">v4.1 (Album/Time)</div>
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>
+    <div id="album-name"></div>
+    <div id="track-time"></div>
     
     <script>
         // -----------------------------------------------
@@ -110,15 +130,19 @@
 
         let pollInterval = null;
 
-        function updateUI(title, artist, imageUrl) {
+        function updateUI(title, artist, imageUrl, album, time) {
             console.log("Updating UI -> Title:", title, "Artist:", artist);
             const titleEl = document.getElementById('song-title');
             const artistEl = document.getElementById('artist-name');
+            const albumEl = document.getElementById('album-name');
+            const timeEl = document.getElementById('track-time');
             const artEl = document.getElementById('album-art');
             const bgEl = document.getElementById('bg-image');
 
             if (title && title !== "") titleEl.textContent = title;
             if (artist && artist !== "") artistEl.textContent = artist;
+            if (album) albumEl.textContent = album;
+            if (time) timeEl.textContent = time;
             
             if (imageUrl) {
                 artEl.style.backgroundImage = `url('${imageUrl}')`;
@@ -217,7 +241,7 @@
                     const meta = event.mediaStatus.media.metadata;
                     if (meta.title) {
                          console.log("Native Metadata Update:", meta.title);
-                         updateUI(meta.title, meta.artist || meta.subtitle, (meta.images && meta.images[0]) ? meta.images[0].url : null);
+                         updateUI(meta.title, meta.artist || meta.subtitle, (meta.images && meta.images[0]) ? meta.images[0].url : null, meta.albumName, null);
                     }
                 }
             }
@@ -247,10 +271,9 @@
         // CUSTOM MESSAGE LISTENER
         console.log("Registering Custom Message Listener for:", NAMESPACE);
         context.addCustomMessageListener(NAMESPACE, (event) => {
-            console.log("Received custom update EVENT:", event);
             if (event.data) {
                  const data = event.data;
-                 updateUI(data.title, data.artist, data.image);
+                 updateUI(data.title, data.artist, data.image, data.album, data.time);
             }
         });
 
