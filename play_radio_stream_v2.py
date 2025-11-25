@@ -310,6 +310,14 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             last_artist_name = None
             
             while True:
+                # Check if app is still running
+                if not cast.socket_client.is_connected:
+                    logging.warning("Chromecast connection lost.")
+                    break
+                
+                # Note: cast.status might not update instantly, but we can try to update it
+                # cast.update_status() # We removed this earlier as it crashed, trust socket connection for now
+                
                 song_title, artist_name, fetched_image_url, album_name, track_time = scrape_kozt_now_playing()
                 
                 if song_title and artist_name and (song_title != last_song_title or artist_name != last_artist_name):
@@ -341,6 +349,9 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             monitor_thread.start()
             
             while True:
+                if not cast.socket_client.is_connected:
+                    logging.warning("Chromecast connection lost.")
+                    break
                 time.sleep(1)
 
     except KeyboardInterrupt:
