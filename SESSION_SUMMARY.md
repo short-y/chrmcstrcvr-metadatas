@@ -1,24 +1,23 @@
-# Session Summary: Chromecast Radio Receiver Debugging (v3.8)
+# Session Summary: Chromecast Radio Receiver Debugging (v3.9-python-fix)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub. The key challenge is displaying "Now Playing" metadata (Song Title/Artist) that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream.py`):** WORKING (Verified App ID).
+- **Sender (`play_radio_stream.py`):** 
+    - **UPDATED (v3.9):** Per user suggestion, moved the App ID verification logic to *after* `mc.block_until_active()`. This ensures we check the active App ID while the stream is playing, confirming if the playback command triggered a fallback to the Default Media Receiver.
 - **Receiver (`index.html` / `receiver.html`):** 
-    - **ISSUE:** User reports "screen looks better but still switches to the other screen to play". This implies the `cast-media-player` (default UI) is taking over visually when playback starts.
-    - **Fix (v3.8):** 
-        - **CSS Variables:** Instead of `opacity: 0` / `visibility: hidden` (which might be ignored or cause fallback), we are now using the official CAF CSS variables (`--splash-image: none`, `--background-image: none`, `color: transparent`, etc.) to make the default player invisible while keeping it functional and "displayed".
-        - **Options:** Updated `context.start()` to include `disableIdleTimeout: true` to prevent premature app closure.
-        - **Layout:** Kept `cast-media-player` in the DOM but visually stripped.
+    - **Status:** Reverted to **v3.8** (CAF Styling / CSS Vars).
+    - **Why:** The user cancelled the v3.9 (remove player tag) commit, and suggested the Python fix instead. We are sticking with the "looks better" v3.8 styling for now and focusing on why the sender might be triggering a switch.
 
-**Next Steps for Future Session:**
-1.  **Check Visuals (v3.8):**
-    - Does the "Other Screen" (Default UI) still appear?
-    - If the UI is now fully transparent, do we see our Custom UI behind it?
-    - **Key Check:** Do you see the "Debug Log" box on the "Other Screen"? If NO, the app has crashed or closed. If YES, the "Other Screen" is just an overlay we need to hide better.
-2.  **Repo Info:**
-    - URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
+**Debugging Hypothesis:**
+If the App ID check passes *before* playback but fails *after*, it confirms that `mc.play_media` is causing the switch. This happens if the Custom Receiver doesn't correctly handle the `LOAD` request or if the `app_id` isn't persistent.
+
+**Next Steps:**
+1.  **Run Updated Sender:** User should run the v3.9 sender script.
+2.  **Check Output:** Look for: `Debug: Active App ID is ...`.
+    - **If ID matches (6509B35C):** The Custom App IS running. The "Regular Screen" is just the Custom App looking like the default one (possibly due to the CSS not hiding everything, or the device overriding it).
+    - **If ID mismatches (CC1AD845):** The device switched apps when playback started.
 
 **Commands to Resume:**
 1.  Activate venv: `source venv/bin/activate`

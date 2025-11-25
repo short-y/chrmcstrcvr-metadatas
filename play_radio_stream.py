@@ -209,11 +209,6 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             print("3. The Chromecast has not been rebooted since registering the device serial number.")
             print("4. The App ID was created very recently and hasn't propagated to the device yet.")
             sys.exit(1)
-            
-        # Verify the correct app is running
-        if cast.status and cast.status.app_id != app_id:
-             print(f"WARNING: Active App ID ({cast.status.app_id}) does not match requested ID ({app_id}).")
-             print("The device may have fallen back to the Default Media Receiver.")
     else:
         print("Launching Default Media Receiver")
         # Default Media Receiver is launched automatically by play_media if no app is running
@@ -223,6 +218,16 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     mc.play_media(stream_url, stream_type, stream_type="LIVE", title=title, thumb=image_url, metadata=metadata)
     mc.block_until_active()
     print("Playback started!")
+
+    # Verify the correct app is running AFTER playback starts
+    cast.update_status()
+    if app_id and cast.status:
+         print(f"Debug: Active App ID is {cast.status.app_id}")
+         if cast.status.app_id != app_id:
+             print(f"WARNING: Active App ID ({cast.status.app_id}) does not match requested ID ({app_id}).")
+             print("The device may have fallen back to the Default Media Receiver.")
+    elif app_id:
+         print("Debug: Could not determine Active App ID (status is None)")
     
     # Start Metadata Monitor
     stop_event = threading.Event()
