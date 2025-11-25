@@ -33,9 +33,9 @@ class RadioController(BaseController):
             "artist": artist,
             "image": image_url
         }
-        print(f"RadioController: Sending update -> {title} / {artist}")
+        logging.debug(f"RadioController: Sending update -> {title} / {artist}")
         if image_url:
-            print(f"  Image: {image_url}")
+            logging.debug(f"  Image: {image_url}")
         self.send_message(msg)
 
 
@@ -49,7 +49,7 @@ def resolve_playlist(url):
     if not (lower_url.endswith('.m3u') or lower_url.endswith('.pls')):
         return url
         
-    print(f"Resolving playlist URL: {url}")
+    logging.debug(f"Resolving playlist URL: {url}")
     try:
         # Fake a user agent, some radios block generic python/requests
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
@@ -68,12 +68,12 @@ def resolve_playlist(url):
                 if '=' in line:
                     parts = line.split('=', 1)
                     if parts[1].lower().startswith('http'):
-                        print(f"Found stream URL in PLS: {parts[1]}")
+                        logging.debug(f"Found stream URL in PLS: {parts[1]}")
                         return parts[1].strip()
 
             # M3U format: just the URL
             if line.lower().startswith('http'):
-                 print(f"Found stream URL in M3U: {line}")
+                 logging.debug(f"Found stream URL in M3U: {line}")
                  return line
                  
     except Exception as e:
@@ -114,7 +114,7 @@ def metadata_monitor(stream_url, controller, stop_event):
     Connects to the stream in a separate thread, reads interleaved metadata,
     and pushes updates to the Chromecast receiver.
     """
-    print(f"Metadata Monitor: Connecting to {stream_url}")
+    logging.debug(f"Metadata Monitor: Connecting to {stream_url}")
     headers = {
         'User-Agent': 'Mozilla/5.0 (compatible; IcecastMetadataReader/1.0)',
         'Icy-MetaData': '1'
@@ -129,10 +129,10 @@ def metadata_monitor(stream_url, controller, stop_event):
                 metaint = int(r.headers.get('icy-metaint', -1))
                 
                 if metaint == -1:
-                    print("Metadata Monitor: No Icy-MetaInt header found. Stream does not support interleaved metadata.")
+                    logging.debug("Metadata Monitor: No Icy-MetaInt header found. Stream does not support interleaved metadata.")
                     return
 
-                print(f"Metadata Monitor: Connected. Interval: {metaint} bytes.")
+                logging.debug(f"Metadata Monitor: Connected. Interval: {metaint} bytes.")
                 
                 while not stop_event.is_set():
                     # Read audio chunk (discard)
@@ -142,7 +142,7 @@ def metadata_monitor(stream_url, controller, stop_event):
                         if stop_event.is_set(): return
                         # Read small chunks to avoid blocking forever
                         chunk_size = min(bytes_to_read, 8192) 
-                        chunk = r.raw.read(chunk_size)
+                        chunk = r.raw.read(chunk_size) 
                         if not chunk:
                             raise Exception("Stream ended")
                         bytes_to_read -= len(chunk)
@@ -161,10 +161,10 @@ def metadata_monitor(stream_url, controller, stop_event):
                         # Parse StreamTitle='...';
                         if "StreamTitle=" in meta_str:
                             try:
-                                raw_title_part = meta_str.split("StreamTitle=")[1].split(';')[0].strip("'")
+                                raw_title_part = meta_str.split("StreamTitle=")[1].split(';')[0].strip("'" )
                                 
                                 if raw_title_part != current_raw_title:
-                                    print(f"Metadata Monitor: New Track -> {raw_title_part}")
+                                    logging.debug(f"Metadata Monitor: New Track -> {raw_title_part}")
                                     current_raw_title = raw_title_part
                                     
                                     # Try to split Artist - Title
@@ -181,7 +181,7 @@ def metadata_monitor(stream_url, controller, stop_event):
                                     try:
                                         controller.send_track_update(title, artist, image_url)
                                     except Exception as e:
-                                        print(f"Metadata Monitor: Send failed: {e}")
+                                        logging.debug(f"Metadata Monitor: Send failed: {e}")
                                         
                             except IndexError:
                                 pass
@@ -189,8 +189,8 @@ def metadata_monitor(stream_url, controller, stop_event):
         except Exception as e:
             # Only print error if not stopping
             if not stop_event.is_set():
-                print(f"Metadata Monitor Connection Lost: {e}")
-                print("Reconnecting in 5 seconds...")
+                logging.debug(f"Metadata Monitor Connection Lost: {e}")
+                logging.debug("Reconnecting in 5 seconds...")
                 time.sleep(5)
 
 def scrape_kozt_now_playing():
@@ -222,10 +222,10 @@ def scrape_kozt_now_playing():
         return None, None, None
 
     except Exception as e:
-        print(f"Error fetching KOZT now playing JSON: {e}")
+        logging.debug(f"Error fetching KOZT now playing JSON: {e}")
         return None, None, None
 
-def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None):
+def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None, is_kozt_station=False):
     print(f"Searching for Chromecast: {device_name}...")
     chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=[device_name])
     
@@ -287,20 +287,20 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     # Verify the correct app is running AFTER playback starts
     time.sleep(1) # Allow status to update
     if app_id and cast.status:
-         print(f"Debug: Active App ID is {cast.status.app_id}")
+         logging.debug(f"Debug: Active App ID is {cast.status.app_id}")
          if cast.status.app_id != app_id:
              print(f"WARNING: Active App ID ({cast.status.app_id}) does not match requested ID ({app_id}).")
              print("The device may have fallen back to the Default Media Receiver.")
     elif app_id:
-         print("Debug: Could not determine Active App ID (status is None)")
+         logging.debug("Debug: Could not determine Active App ID (status is None)")
     
     # MONITOR LOGIC
     stop_event = threading.Event()
     browser_discovery_active = True
     
     try:
-        # KOZT SPECIFIC LOGIC
-        if "kozt" in stream_url.lower():
+        # KOZT SPECIFIC LOGIC - Check explicit flag first
+        if is_kozt_station or "kozt" in stream_url.lower():
             print("--- Detected KOZT Stream. Using Amperwave JSON API for Metadata ---")
             last_song_title = None
             last_artist_name = None
@@ -309,23 +309,23 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                 song_title, artist_name, fetched_image_url = scrape_kozt_now_playing()
                 
                 if song_title and artist_name and (song_title != last_song_title or artist_name != last_artist_name):
-                    print(f"KOZT Monitor: New Track -> {song_title} / {artist_name}")
+                    logging.debug(f"KOZT Monitor: New Track -> {song_title} / {artist_name}")
                     last_song_title = song_title
                     last_artist_name = artist_name
                     
                     # Use fetched image URL directly (no iTunes lookup needed)
                     if fetched_image_url:
-                        print(f"  Album Art: {fetched_image_url}")
+                        logging.debug(f"  Album Art: {fetched_image_url}")
                         final_image_url = fetched_image_url
                     else:
                         # Fallback to iTunes logic if API has data but no image (rare)
-                        # or just use default. For now, we try iTunes if JSON lacks image.
+                        # For now, we try iTunes if JSON lacks image.
                         final_image_url = fetch_album_art(artist_name, song_title) 
                     
                     try:
                         radio_controller.send_track_update(song_title, artist_name, final_image_url)
                     except Exception as e:
-                        print(f"KOZT Monitor: Send failed: {e}")
+                        logging.debug(f"KOZT Monitor: Send failed: {e}")
                 
                 time.sleep(10) # Refresh every 10 seconds
         
@@ -355,13 +355,14 @@ if __name__ == "__main__":
     parser.add_argument("--image", default=DEFAULT_IMAGE_URL, help="Display Image URL")
     parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--kozt", action="store_true", help="Force KOZT metadata scraping, even if URL doesn't contain 'kozt'")
     
     args = parser.parse_args()
     
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
+    # Configure logging: DEBUG if requested, otherwise INFO
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format='%(message)s')
     
     # Resolve playlist if necessary
     final_url = resolve_playlist(args.url)
     
-    play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id)
+    play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt)
