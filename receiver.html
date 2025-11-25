@@ -95,10 +95,11 @@
             border: 2px solid red; /* DEBUG BORDER */
             min-height: 50px; /* Ensure it has height even if empty */
             background: rgba(255, 0, 0, 0.2); /* Slight tint to see area */
+            color: lime;
         }
         #artist-name {
             font-size: 1.2em;
-            color: #ddd;
+            color: lime;
             margin-top: 5px;
             text-align: center;
             text-transform: uppercase;
@@ -111,14 +112,22 @@
             background: rgba(255, 0, 0, 0.2);
         }
         cast-media-player {
-            display: none; 
+            display: block !important;
+            opacity: 0 !important;
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -10 !important;
+            pointer-events: none !important;
         }
     </style>
 </head>
 <body>
 
     <div id="bg-image"></div>
-    <div id="version-tag">v3.2 (Layout Debug)</div>
+    <div id="version-tag">v3.4 (Player Hidden)</div>
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>
