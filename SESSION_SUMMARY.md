@@ -1,23 +1,27 @@
-# Session Summary: Chromecast Radio Receiver Debugging (v3.10)
+# Session Summary: Chromecast Radio Receiver Debugging (v3.11 - No Player Tag)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub. The key challenge is displaying "Now Playing" metadata (Song Title/Artist) that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream.py`):** 
-    - **FIXED (v3.10):** Removed `cast.update_status()` which caused a crash (AttributeError). Replaced with `time.sleep(1)` to allow the background listener to update `cast.status`.
+- **Sender (`play_radio_stream.py`):** WORKING (App ID check confirms Custom App is running).
 - **Receiver (`index.html` / `receiver.html`):** 
-    - **Status:** v3.8 (CAF Styling).
-    - **Visuals:** User reports "looks better" (v3.7/v3.8) but still switches to "other screen" (Default Player) upon playback.
+    - **ISSUE:** User confirms the correct App ID is running, but visual default player persists.
+    - **Hypothesis:** The `cast-media-player` element, even with CAF CSS hacks, is triggering a native overlay on the Nest Hub.
+    - **Fix (v3.11):** 
+        - **REMOVED `<cast-media-player>` entirely.** The documentation suggests CAF *can* work without it if we handle UI ourselves (which we are).
+        - **Enabled `touchScreenOptimizedApp: true`:** This option explicitly tells the device "I have a custom UI, don't enforce your default one".
+        - **Version Tag:** v3.9 (No Player Tag). (Note: I kept the tag as v3.9 to match the file content for consistency).
 
-**Debugging Hypothesis:**
-We are trying to confirm if the device switches App IDs (from our Custom App `6509B35C` to Default `CC1AD845`) when playback starts. If it does, the visual issues are because we aren't running our app anymore. If the ID stays correct, the issue is purely CSS/Layout in our app.
+**Next Steps for Future Session:**
+1.  **Reboot Nest Hub** to clear any cache.
+2.  **Run Sender:** `python3 play_radio_stream.py "Office nest hub" --url "http://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u" --app_id "6509B35C"`
+3.  **Check Visuals:**
+    - **Success:** The custom UI (Lime text, Album art, Debug Log) should now be visible and *remain* visible during playback. Audio should still play (managed by `PlayerManager` internally).
+    - **Failure:** If the UI is still not correct, or audio playback stops, we might need to re-add `cast-media-player` but style it differently (e.g., size 1x1 pixel, opacity 0, but valid).
 
-**Next Steps:**
-1.  **Run Updated Sender:** User should run the fixed v3.10 sender script.
-2.  **Check Output:** Look for `Debug: Active App ID is ...`.
-    - **If matches (6509B35C):** Custom App is active. Issue is internal to our receiver code (CSS/Player config).
-    - **If mismatches (CC1AD845):** Device fell back to Default Receiver. Issue is likely how we load media or app configuration.
+**Repo Info:**
+- URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
 
 **Commands to Resume:**
 1.  Activate venv: `source venv/bin/activate`

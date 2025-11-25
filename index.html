@@ -142,17 +142,13 @@
 <body>
 
     <div id="bg-image"></div>
-    <div id="version-tag">v3.8 (CAF Styling)</div>
+    <div id="version-tag">v3.9 (No Player Tag)</div>
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>
     
     <!-- Debug Log Container -->
     <div id="debug-log">Waiting for logs...</div>
-
-    <div id="player-hidden-wrapper">
-        <cast-media-player></cast-media-player>
-    </div>
 
     <script>
         // --- ROBUST DEBUG SETUP (Running Immediately) ---
@@ -344,6 +340,7 @@
 
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
+        options.touchScreenOptimizedApp = true;
         context.start(options);
         console.log("Receiver Context Started");
     </script>

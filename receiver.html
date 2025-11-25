@@ -114,45 +114,18 @@
             min-height: 5vh;
             background: rgba(255, 0, 0, 0.2);
         }
-        #player-hidden-wrapper {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1000;
-            pointer-events: none;
-        }
-        cast-media-player {
-            --theme-hue: 210;
-            --progress-color: transparent;
-            --splash-image: none;
-            --watermark-image: none;
-            --background-image: none;
-            --logo-image: none;
-            --playback-logo-image: none;
-            --spinner-image: none;
-            --buffering-image: none;
-            background: transparent;
-            color: transparent;
-            display: block !important;
-        }
     </style>
 </head>
 <body>
 
     <div id="bg-image"></div>
-    <div id="version-tag">v3.8 (CAF Styling)</div>
+    <div id="version-tag">v3.9 (No Player Tag)</div>
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>
     
     <!-- Debug Log Container -->
     <div id="debug-log">Waiting for logs...</div>
-
-    <div id="player-hidden-wrapper">
-        <cast-media-player></cast-media-player>
-    </div>
 
     <script>
         // --- ROBUST DEBUG SETUP (Running Immediately) ---
@@ -344,6 +317,7 @@
 
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
+        options.touchScreenOptimizedApp = true;
         context.start(options);
         console.log("Receiver Context Started");
     </script>
