@@ -369,4 +369,10 @@ if __name__ == "__main__":
     # Resolve playlist if necessary
     final_url = resolve_playlist(args.url)
     
-    play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt)
+    while True:
+        try:
+            play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt)
+        except Exception as e:
+            logging.error(f"Connection lost or error occurred: {e}")
+            logging.info("Attempting to reconnect in 5 seconds...")
+            time.sleep(5)
