@@ -1,23 +1,23 @@
-# Session Summary: Chromecast Radio Receiver Debugging (v3.9-python-fix)
+# Session Summary: Chromecast Radio Receiver Debugging (v3.10)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub. The key challenge is displaying "Now Playing" metadata (Song Title/Artist) that updates in real-time.
 
 **Current Status:**
 - **Sender (`play_radio_stream.py`):** 
-    - **UPDATED (v3.9):** Per user suggestion, moved the App ID verification logic to *after* `mc.block_until_active()`. This ensures we check the active App ID while the stream is playing, confirming if the playback command triggered a fallback to the Default Media Receiver.
+    - **FIXED (v3.10):** Removed `cast.update_status()` which caused a crash (AttributeError). Replaced with `time.sleep(1)` to allow the background listener to update `cast.status`.
 - **Receiver (`index.html` / `receiver.html`):** 
-    - **Status:** Reverted to **v3.8** (CAF Styling / CSS Vars).
-    - **Why:** The user cancelled the v3.9 (remove player tag) commit, and suggested the Python fix instead. We are sticking with the "looks better" v3.8 styling for now and focusing on why the sender might be triggering a switch.
+    - **Status:** v3.8 (CAF Styling).
+    - **Visuals:** User reports "looks better" (v3.7/v3.8) but still switches to "other screen" (Default Player) upon playback.
 
 **Debugging Hypothesis:**
-If the App ID check passes *before* playback but fails *after*, it confirms that `mc.play_media` is causing the switch. This happens if the Custom Receiver doesn't correctly handle the `LOAD` request or if the `app_id` isn't persistent.
+We are trying to confirm if the device switches App IDs (from our Custom App `6509B35C` to Default `CC1AD845`) when playback starts. If it does, the visual issues are because we aren't running our app anymore. If the ID stays correct, the issue is purely CSS/Layout in our app.
 
 **Next Steps:**
-1.  **Run Updated Sender:** User should run the v3.9 sender script.
-2.  **Check Output:** Look for: `Debug: Active App ID is ...`.
-    - **If ID matches (6509B35C):** The Custom App IS running. The "Regular Screen" is just the Custom App looking like the default one (possibly due to the CSS not hiding everything, or the device overriding it).
-    - **If ID mismatches (CC1AD845):** The device switched apps when playback started.
+1.  **Run Updated Sender:** User should run the fixed v3.10 sender script.
+2.  **Check Output:** Look for `Debug: Active App ID is ...`.
+    - **If matches (6509B35C):** Custom App is active. Issue is internal to our receiver code (CSS/Player config).
+    - **If mismatches (CC1AD845):** Device fell back to Default Receiver. Issue is likely how we load media or app configuration.
 
 **Commands to Resume:**
 1.  Activate venv: `source venv/bin/activate`

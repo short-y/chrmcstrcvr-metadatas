@@ -220,7 +220,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     print("Playback started!")
 
     # Verify the correct app is running AFTER playback starts
-    cast.update_status()
+    time.sleep(1) # Allow status to update
     if app_id and cast.status:
          print(f"Debug: Active App ID is {cast.status.app_id}")
          if cast.status.app_id != app_id:
