@@ -1,23 +1,22 @@
-# Session Summary: Chromecast Radio Receiver Debugging (v3.4)
+# Session Summary: Chromecast Radio Receiver Debugging (v3.5)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub. The key challenge is displaying "Now Playing" metadata (Song Title/Artist) that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream.py`):** WORKING.
-- **Receiver (`index.html`):** 
-    - Deployed to GitHub Pages.
-    - **ISSUE (Solved?):** The user reported that the screen "switches to a different screen" when playback starts. This indicates the default `cast-media-player` UI is taking over.
-    - **Debug State (v3.4):** 
-        - Instead of `display: none` (which might stop playback or be overridden), we are now hiding the `cast-media-player` using `opacity: 0`, `z-index: -10`, and `position: absolute`. This keeps the element "rendered" (so playback works) but visually hides the default UI behind our custom background and text.
-        - Text color is `lime` green.
-        - Red borders are still present on text elements.
+- **Sender (`play_radio_stream.py`):** WORKING (Fixed a bug with duplicate main block).
+- **Receiver (`index.html` / `receiver.html`):** 
+    - **ISSUE:** User reports "momentary display with the red boxes but it then changes to a different screen" when playback starts.
+    - **Hypothesis:** The `cast-media-player` element, despite `opacity: 0`, might be overlaying the content or triggering a native "Now Playing" view on the Nest Hub because it's part of the active render tree.
+    - **Fix Attempt (v3.5):** 
+        - Wrapped `<cast-media-player>` in a `div` with `#player-hidden-wrapper`.
+        - Set this wrapper to `visibility: hidden`, `position: absolute`, `z-index: -1000`, `width: 1px`, `height: 1px`.
+        - This ensures the player is "present" in the DOM (so CAF works) but completely removed from the visual rendering path of the page's main layout.
 
 **Next Steps for Future Session:**
-1.  **Check Visuals:** Look at the Nest Hub running v3.4.
-    - **Success:** The custom UI (lime text, red boxes) should now **remain visible** while music plays. The "different screen" (default UI) should not appear.
-    - **Failure:** If the default UI still appears, it implies the Cast SDK is forcing a top-level overlay or `z-index` war. We might need to check `CastReceiverOptions` to disable the default UI explicitly if possible, or ensure we aren't using a "Styled Media Receiver" App ID.
-    - **No Playback:** If hiding the player stops audio, we'll know `display: none` vs `opacity: 0` wasn't the only factor.
+1.  **Check Visuals (v3.5):**
+    - If the "different screen" persists, it might be the **Touch Controls** overlay or **Google Assistant Media** view which operates outside the Web Receiver's DOM.
+    - If fixed, the custom UI (lime green text) should stay visible.
 2.  **Repo Info:**
     - URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
 
