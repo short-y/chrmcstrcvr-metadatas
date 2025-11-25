@@ -253,23 +253,3 @@ if __name__ == "__main__":
     final_url = resolve_playlist(args.url)
     
     play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Play an internet radio stream on Chromecast.")
-    parser.add_argument("device_name", help="The friendly name of the Chromecast (e.g., 'Living Room TV')")
-    parser.add_argument("--url", default=DEFAULT_STREAM_URL, help="Stream URL")
-    parser.add_argument("--title", default=DEFAULT_TITLE, help="Display Title")
-    parser.add_argument("--image", default=DEFAULT_IMAGE_URL, help="Display Image URL")
-    parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
-    
-    args = parser.parse_args()
-    
-    if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-    
-    # Resolve playlist if necessary
-    final_url = resolve_playlist(args.url)
-    
-    play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id)
