@@ -200,6 +200,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         print(f"Launching Custom App ID: {app_id}")
         try:
             cast.start_app(app_id) # Custom Receiver
+            time.sleep(2) # Wait for app to load
         except pychromecast.error.RequestFailed:
             print(f"Error: Failed to launch App ID {app_id}.")
             print("Possible causes:")
@@ -208,6 +209,11 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             print("3. The Chromecast has not been rebooted since registering the device serial number.")
             print("4. The App ID was created very recently and hasn't propagated to the device yet.")
             sys.exit(1)
+            
+        # Verify the correct app is running
+        if cast.status and cast.status.app_id != app_id:
+             print(f"WARNING: Active App ID ({cast.status.app_id}) does not match requested ID ({app_id}).")
+             print("The device may have fallen back to the Default Media Receiver.")
     else:
         print("Launching Default Media Receiver")
         # Default Media Receiver is launched automatically by play_media if no app is running

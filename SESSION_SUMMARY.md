@@ -1,24 +1,24 @@
-# Session Summary: Chromecast Radio Receiver Debugging (v3.5)
+# Session Summary: Chromecast Radio Receiver Debugging (v3.6)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub. The key challenge is displaying "Now Playing" metadata (Song Title/Artist) that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream.py`):** WORKING (Fixed a bug with duplicate main block).
+- **Sender (`play_radio_stream.py`):** 
+    - **FIXED:** Duplicate main block.
+    - **UPDATED (v3.6):** Added logic to verify the active App ID after launch. It now waits 2 seconds and warns if the running App ID doesn't match the requested one. This helps confirm if the device is silently falling back to the Default Media Receiver.
 - **Receiver (`index.html` / `receiver.html`):** 
-    - **ISSUE:** User reports "momentary display with the red boxes but it then changes to a different screen" when playback starts.
-    - **Hypothesis:** The `cast-media-player` element, despite `opacity: 0`, might be overlaying the content or triggering a native "Now Playing" view on the Nest Hub because it's part of the active render tree.
-    - **Fix Attempt (v3.5):** 
-        - Wrapped `<cast-media-player>` in a `div` with `#player-hidden-wrapper`.
-        - Set this wrapper to `visibility: hidden`, `position: absolute`, `z-index: -1000`, `width: 1px`, `height: 1px`.
-        - This ensures the player is "present" in the DOM (so CAF works) but completely removed from the visual rendering path of the page's main layout.
+    - **Status:** v3.5 deployed (Player Hidden Wrapper).
+    - **Issue:** User still sees "regular cast screen". This strongly implies the Custom Receiver isn't running at all.
 
-**Next Steps for Future Session:**
-1.  **Check Visuals (v3.5):**
-    - If the "different screen" persists, it might be the **Touch Controls** overlay or **Google Assistant Media** view which operates outside the Web Receiver's DOM.
-    - If fixed, the custom UI (lime green text) should stay visible.
-2.  **Repo Info:**
-    - URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
+**Debugging Hypothesis:**
+The "regular cast screen" is the **Default Media Receiver**. The custom App ID launch is likely failing silently or being overridden, causing `pychromecast` (or the device) to fall back. The new checks in `play_radio_stream.py` will confirm this.
+
+**Next Steps:**
+1.  **Run Updated Sender:** User should run the v3.6 sender script.
+2.  **Check Output:** Look for the warning: `WARNING: Active App ID (...) does not match requested ID (...)`.
+    - **If Warning Appears:** The issue is Registration/Propagation. The App ID is invalid, the device isn't registered for dev, or the serial number hasn't propagated.
+    - **If NO Warning:** The Custom App *is* running, but the "regular screen" means our `index.html` is either failing to load (404/Certificate Error) or the default player is somehow still visible despite our CSS.
 
 **Commands to Resume:**
 1.  Activate venv: `source venv/bin/activate`
