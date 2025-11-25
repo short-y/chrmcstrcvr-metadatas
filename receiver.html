@@ -13,6 +13,7 @@
 <html>
 <head>
     <title>Internet Radio Receiver</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
     <style>
@@ -53,8 +54,8 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 300px; /* Small box */
-            height: 100px;
+            width: 40vw; 
+            height: 20vh;
             background: rgba(0, 0, 0, 0.6);
             color: #00ff00;
             font-family: monospace;
@@ -66,10 +67,12 @@
             border-bottom-right-radius: 10px;
         }
         #album-art {
-            width: 25vh; /* Responsive size for small screens */
-            height: 25vh;
+            width: 30vw; 
+            height: 30vw;
+            max-width: 300px;
+            max-height: 300px;
             background-color: #333;
-            margin-bottom: 15px;
+            margin-bottom: 2vh;
             background-size: cover;
             background-position: center;
             box-shadow: 0 5px 20px rgba(0,0,0,0.8);
@@ -83,9 +86,9 @@
             border: 2px solid red; /* DEBUG BORDER */
         }
         #song-title {
-            font-size: 2em; 
+            font-size: 5vw; 
             font-weight: 400;
-            margin: 0 10px;
+            margin: 0 2vw;
             text-align: center;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             position: relative;
@@ -93,14 +96,14 @@
             max-width: 90%;
             word-wrap: break-word;
             border: 2px solid red; /* DEBUG BORDER */
-            min-height: 50px; /* Ensure it has height even if empty */
-            background: rgba(255, 0, 0, 0.2); /* Slight tint to see area */
+            min-height: 8vh; 
+            background: rgba(255, 0, 0, 0.2); 
             color: lime;
         }
         #artist-name {
-            font-size: 1.2em;
+            font-size: 3vw;
             color: lime;
-            margin-top: 5px;
+            margin-top: 1vh;
             text-align: center;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -108,7 +111,7 @@
             position: relative;
             z-index: 10;
             border: 2px solid red; /* DEBUG BORDER */
-            min-height: 30px;
+            min-height: 5vh;
             background: rgba(255, 0, 0, 0.2);
         }
         #player-hidden-wrapper {
@@ -131,7 +134,7 @@
 <body>
 
     <div id="bg-image"></div>
-    <div id="version-tag">v3.5 (Wrapper Hidden)</div>
+    <div id="version-tag">v3.7 (Viewport Fix)</div>
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>

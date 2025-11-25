@@ -1,24 +1,27 @@
-# Session Summary: Chromecast Radio Receiver Debugging (v3.6)
+# Session Summary: Chromecast Radio Receiver Debugging (v3.7)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub. The key challenge is displaying "Now Playing" metadata (Song Title/Artist) that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream.py`):** 
-    - **FIXED:** Duplicate main block.
-    - **UPDATED (v3.6):** Added logic to verify the active App ID after launch. It now waits 2 seconds and warns if the running App ID doesn't match the requested one. This helps confirm if the device is silently falling back to the Default Media Receiver.
+- **Sender (`play_radio_stream.py`):** WORKING (Verified App ID).
 - **Receiver (`index.html` / `receiver.html`):** 
-    - **Status:** v3.5 deployed (Player Hidden Wrapper).
-    - **Issue:** User still sees "regular cast screen". This strongly implies the Custom Receiver isn't running at all.
+    - **ISSUE:** User reports text is "much smaller than usual" and looks like it's designed for a larger screen.
+    - **Hypothesis:** The `viewport` meta tag was missing, causing the Nest Hub to render the page at a desktop resolution (e.g., 980px) and scale it down, making everything tiny.
+    - **Fix (v3.7):** 
+        - Added `<meta name="viewport" content="width=device-width, initial-scale=1.0">`.
+        - Updated CSS to use relative units (`vw`, `vh`) instead of fixed `px` or `em` for better scaling on small screens.
+        - Song Title: `5vw`
+        - Artist Name: `3vw`
+        - Album Art: `30vw`
 
-**Debugging Hypothesis:**
-The "regular cast screen" is the **Default Media Receiver**. The custom App ID launch is likely failing silently or being overridden, causing `pychromecast` (or the device) to fall back. The new checks in `play_radio_stream.py` will confirm this.
-
-**Next Steps:**
-1.  **Run Updated Sender:** User should run the v3.6 sender script.
-2.  **Check Output:** Look for the warning: `WARNING: Active App ID (...) does not match requested ID (...)`.
-    - **If Warning Appears:** The issue is Registration/Propagation. The App ID is invalid, the device isn't registered for dev, or the serial number hasn't propagated.
-    - **If NO Warning:** The Custom App *is* running, but the "regular screen" means our `index.html` is either failing to load (404/Certificate Error) or the default player is somehow still visible despite our CSS.
+**Next Steps for Future Session:**
+1.  **Check Visuals (v3.7):**
+    - The layout should now fill the screen properly.
+    - Text should be legible.
+    - If text is *too* big now, we can dial back the `vw` values.
+2.  **Repo Info:**
+    - URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
 
 **Commands to Resume:**
 1.  Activate venv: `source venv/bin/activate`
