@@ -350,3 +350,23 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         if app_id:
              cast.quit_app()
         browser.stop_discovery()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Play an internet radio stream on Chromecast.")
+    parser.add_argument("device_name", help="The friendly name of the Chromecast (e.g., 'Living Room TV')")
+    parser.add_argument("--url", default=DEFAULT_STREAM_URL, help="Stream URL")
+    parser.add_argument("--title", default=DEFAULT_TITLE, help="Display Title")
+    parser.add_argument("--image", default=DEFAULT_IMAGE_URL, help="Display Image URL")
+    parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--kozt", action="store_true", help="Force KOZT metadata scraping, even if URL doesn't contain 'kozt'")
+    
+    args = parser.parse_args()
+    
+    # Configure logging: DEBUG if requested, otherwise INFO
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format='%(message)s')
+    
+    # Resolve playlist if necessary
+    final_url = resolve_playlist(args.url)
+    
+    play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt)
