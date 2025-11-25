@@ -397,10 +397,19 @@ if __name__ == "__main__":
     # Resolve playlist if necessary
     final_url = resolve_playlist(args.url)
     
-    while True:
-        try:
-            play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt)
-        except Exception as e:
-            logging.error(f"Connection lost or error occurred: {e}")
-            logging.info("Attempting to reconnect in 5 seconds...")
-            time.sleep(5)
+    browser = None # Initialize browser here to be accessible in finally
+    
+    try:
+        while True:
+            try:
+                play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt)
+            except Exception as e:
+                logging.error(f"Connection lost or error occurred: {e}")
+                logging.info("Attempting to reconnect in 5 seconds...")
+                time.sleep(5)
+    except KeyboardInterrupt:
+        logging.info("Script stopped by user.")
+    finally:
+        if browser:
+            logging.debug("Stopping Chromecast discovery.")
+            browser.stop_discovery()
