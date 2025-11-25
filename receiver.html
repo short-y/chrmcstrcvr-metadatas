@@ -50,22 +50,6 @@
             z-index: 10000;
             text-shadow: 1px 1px 2px black;
         }
-        #debug-log {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 40vw; 
-            height: 20vh;
-            background: rgba(0, 0, 0, 0.6);
-            color: #00ff00;
-            font-family: monospace;
-            font-size: 10px;
-            overflow-y: scroll;
-            padding: 5px;
-            z-index: 20000; 
-            display: block;
-            border-bottom-right-radius: 10px;
-        }
         #album-art {
             width: 30vw; 
             height: 30vw;
@@ -83,7 +67,6 @@
             background-size: 50%;
             position: relative; 
             z-index: 10;
-            border: 2px solid red; /* DEBUG BORDER */
         }
         #song-title {
             font-size: 5vw; 
@@ -95,14 +78,11 @@
             z-index: 10;
             max-width: 90%;
             word-wrap: break-word;
-            border: 2px solid red; /* DEBUG BORDER */
-            min-height: 8vh; 
-            background: rgba(255, 0, 0, 0.2); 
-            color: lime;
+            color: #ffffff;
         }
         #artist-name {
             font-size: 3vw;
-            color: lime;
+            color: #ddd;
             margin-top: 1vh;
             text-align: center;
             text-transform: uppercase;
@@ -110,59 +90,18 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             position: relative;
             z-index: 10;
-            border: 2px solid red; /* DEBUG BORDER */
-            min-height: 5vh;
-            background: rgba(255, 0, 0, 0.2);
         }
     </style>
 </head>
 <body>
 
     <div id="bg-image"></div>
-    <div id="version-tag">v3.9 (No Player Tag)</div>
+    <div id="version-tag">v4.0 (Final)</div>
     <div id="album-art"></div>
     <div id="song-title">Ready to Cast</div>
     <div id="artist-name"></div>
     
-    <!-- Debug Log Container -->
-    <div id="debug-log">Waiting for logs...</div>
-
     <script>
-        // --- ROBUST DEBUG SETUP (Running Immediately) ---
-        const debugEl = document.getElementById('debug-log');
-        
-        function appendLog(type, args) {
-            try {
-                const msg = Array.from(args).map(a => {
-                    if (typeof a === 'object') {
-                        try { return JSON.stringify(a); } catch(e) { return '[Object]'; }
-                    }
-                    return String(a);
-                }).join(' ');
-                
-                const line = document.createElement('div');
-                line.textContent = `[${type}] ${msg}`;
-                if (type === 'ERR' || type === 'GLOBAL_ERR') line.style.color = '#ff5555';
-                debugEl.appendChild(line);
-                debugEl.scrollTop = debugEl.scrollHeight;
-            } catch(e) {
-                // Failsafe
-            }
-        }
-
-        // 1. Catch Global Errors (Syntax, Network, etc.)
-        window.onerror = function (msg, url, lineNo, columnNo, error) {
-            appendLog('GLOBAL_ERR', [msg, url, lineNo, error]);
-            return false;
-        };
-
-        // 2. Override Console
-        const originalLog = console.log;
-        const originalErr = console.error;
-        console.log = function() { originalLog.apply(console, arguments); appendLog('LOG', arguments); };
-        console.error = function() { originalErr.apply(console, arguments); appendLog('ERR', arguments); };
-        
-        console.log("Debug Logger Initialized. Version 2.1 loaded.");
         // -----------------------------------------------
 
         const context = cast.framework.CastReceiverContext.getInstance();
@@ -308,7 +247,6 @@
         // CUSTOM MESSAGE LISTENER
         console.log("Registering Custom Message Listener for:", NAMESPACE);
         context.addCustomMessageListener(NAMESPACE, (event) => {
-            console.log("Received custom update EVENT:", event);
             if (event.data) {
                  const data = event.data;
                  updateUI(data.title, data.artist, data.image);
