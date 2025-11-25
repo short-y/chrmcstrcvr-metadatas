@@ -1,4 +1,4 @@
-# Session Summary: Chromecast Radio Receiver (v4.0 - Final)
+# Session Summary: Chromecast Radio Receiver Debugging (v4.0 - Final)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist) that updates in real-time.
@@ -15,12 +15,16 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
         5.  **`disableIdleTimeout`:** Enabled to prevent the app from closing prematurely.
     - **Cleanup (v4.0):** All debug elements (red borders, lime green text, debug log box, debug JS) have been removed.
 
-**Next Steps for Future Session:**
-- The core functionality is now working as intended. Further enhancements would be new feature requests.
+**New Development (Version 2):**
+- **`play_radio_stream_v2.py`**: Created. Includes integration with **iTunes Search API** to fetch album art based on Artist/Title parsed from the stream.
+- **`receiver_v2.html`**: Not created (User can use `index.html` as it is already capable).
+
+**Next Steps:**
+- User to test `play_radio_stream_v2.py`.
 
 **Repo Info:**
 - URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
 
 **Commands to Resume:**
 1.  Activate venv: `source venv/bin/activate`
-2.  Run Sender: `python3 play_radio_stream.py "Office nest hub" --url "http://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u" --app_id "6509B35C"`
+2.  Run V2 Sender: `python3 play_radio_stream_v2.py "Office nest hub" --url "http://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u" --app_id "6509B35C"`
