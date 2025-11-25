@@ -195,33 +195,34 @@ def metadata_monitor(stream_url, controller, stop_event):
 
 def scrape_kozt_now_playing():
     """
-    Fetches KOZT now playing data from the Amperwave JSON API.
-    Returns: title, artist, image_url
+    Scrapes KOZT.com/now-playing for current song and artist.
     """
     try:
-        # Using the API endpoint provided by the user
-        response = requests.get("https://player.amperwave.net/4756", timeout=5)
+        # Mimic the Jsoup connection from Kotlin: Jsoup.connect("https://kozt.com/now-playing/").get()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get("https://kozt.com/now-playing/", headers=headers, timeout=10)
         response.raise_for_status()
         
-        data = response.json()
-        
-        if "performances" in data and isinstance(data["performances"], list) and len(data["performances"]) > 0:
-            current_track = data["performances"][0]
-            
-            song_title = current_track.get("title", "Unknown Song").strip()
-            artist_name = current_track.get("artist", "Unknown Artist").strip()
-            
-            # Prefer large image, fall back to medium, then small
-            image_url = current_track.get("largeimage") or \
-                        current_track.get("mediumimage") or \
-                        current_track.get("smallimage")
-            
-            return song_title, artist_name, image_url
-            
-        return None, None, None
+        try:
+            from bs4 import BeautifulSoup
+        except ImportError:
+            print("Error: 'beautifulsoup4' library not found. Please install it: pip install beautifulsoup4")
+            return None, None
 
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Selectors from Kotlin: .selectFirst(".song-title") and .selectFirst(".artist-name")
+        song_title_element = soup.select_one(".song-title")
+        artist_name_element = soup.select_one(".artist-name")
+        
+        song_title = song_title_element.text.strip() if song_title_element else "Unknown Song"
+        artist_name = artist_name_element.text.strip() if artist_name_element else "Unknown Artist"
+        
+        return song_title, artist_name, None # No image URL from scraping
     except Exception as e:
-        print(f"Error fetching KOZT now playing JSON: {e}")
+        print(f"Error scraping KOZT now playing: {e}")
         return None, None, None
 
 def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None):
@@ -300,28 +301,23 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     try:
         # KOZT SPECIFIC LOGIC
         if "kozt" in stream_url.lower():
-            print("--- Detected KOZT Stream. Using Amperwave JSON API for Metadata ---")
+            print("--- Detected KOZT Stream. Using Web Scraper for Metadata ---")
             last_song_title = None
             last_artist_name = None
             
             while True:
-                song_title, artist_name, fetched_image_url = scrape_kozt_now_playing()
+                song_title, artist_name, _ = scrape_kozt_now_playing()
                 
                 if song_title and artist_name and (song_title != last_song_title or artist_name != last_artist_name):
                     print(f"KOZT Monitor: New Track -> {song_title} / {artist_name}")
                     last_song_title = song_title
                     last_artist_name = artist_name
                     
-                    # Use fetched image URL directly (no iTunes lookup needed)
-                    if fetched_image_url:
-                        print(f"  Album Art: {fetched_image_url}")
-                        final_image_url = fetched_image_url
-                    else:
-                        # Fallback to default or previous logic if needed, but API should provide it
-                        final_image_url = image_url 
+                    # Fetch Album Art (using iTunes API as scraper doesn't provide it)
+                    album_art_url = fetch_album_art(artist_name, song_title)
                     
                     try:
-                        radio_controller.send_track_update(song_title, artist_name, final_image_url)
+                        radio_controller.send_track_update(song_title, artist_name, album_art_url)
                     except Exception as e:
                         print(f"KOZT Monitor: Send failed: {e}")
                 
