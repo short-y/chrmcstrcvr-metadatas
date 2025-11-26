@@ -27,6 +27,7 @@ class RadioController(BaseController):
         super(RadioController, self).__init__(NAMESPACE)
         self.received_disconnect = False
         self.pong_received = threading.Event()
+        self.is_hidden = False
 
     def receive_message(self, message, data):
         """
@@ -41,6 +42,7 @@ class RadioController(BaseController):
             
             if visibility == 'hidden':
                 logging.warning("Receiver reports it is HIDDEN (background/screensaver).")
+                self.is_hidden = True
             if standby == 'STANDBY':
                  logging.warning("Receiver reports it is in STANDBY mode.")
 
@@ -390,6 +392,14 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                 if radio_controller.received_disconnect:
                     logging.warning("Explicit disconnect received from Receiver.")
                     break
+                
+                # Check if receiver is hidden (backgrounded)
+                if radio_controller.is_hidden:
+                    logging.warning("Receiver is hidden. Sending Launch command to foreground it (without restarting playback)...")
+                    # specific 'launch_app' simply brings the existing app to focus if running
+                    cast.socket_client.receiver_controller.launch_app(app_id)
+                    radio_controller.is_hidden = False
+                    time.sleep(2) # Give it a moment to become active again
 
                 # 2. Check logical connection state
                 if not cast.socket_client.is_connected:
@@ -469,6 +479,14 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                 if radio_controller.received_disconnect:
                     logging.warning("Explicit disconnect received from Receiver.")
                     break
+
+                # Check if receiver is hidden (backgrounded)
+                if radio_controller.is_hidden:
+                    logging.warning("Receiver is hidden. Sending Launch command to foreground it (without restarting playback)...")
+                    # specific 'launch_app' simply brings the existing app to focus if running
+                    cast.socket_client.receiver_controller.launch_app(app_id)
+                    radio_controller.is_hidden = False
+                    time.sleep(2) # Give it a moment to become active again
 
                 if not cast.socket_client.is_connected:
                     logging.warning("Chromecast connection lost.")
