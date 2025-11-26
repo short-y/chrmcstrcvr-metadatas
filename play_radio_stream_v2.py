@@ -25,6 +25,18 @@ class RadioController(BaseController):
     """
     def __init__(self):
         super(RadioController, self).__init__(NAMESPACE)
+        self.received_disconnect = False
+
+    def receive_message(self, message, data):
+        """
+        Called when a message is received from the receiver.
+        """
+        logging.debug(f"RadioController: Received message -> {data}")
+        if data.get('type') == 'DISCONNECT':
+             logging.warning("Receiver sent DISCONNECT signal.")
+             self.received_disconnect = True
+             return True # Handled
+        return False
 
     def send_track_update(self, title, artist, image_url=None, album=None, time=None):
         """Sends a track update message to the receiver."""
@@ -339,6 +351,11 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                     if consecutive_errors >= 3:
                         logging.warning("Too many connection errors. Assuming disconnected.")
                         break
+                
+                # Check for explicit disconnect message
+                if radio_controller.received_disconnect:
+                    logging.warning("Explicit disconnect received from Receiver.")
+                    break
 
                 # 2. Check logical connection state
                 if not cast.socket_client.is_connected:
@@ -402,6 +419,11 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                     if consecutive_errors >= 3:
                          logging.warning("Too many connection errors. Assuming disconnected.")
                          break
+                
+                # Check for explicit disconnect message
+                if radio_controller.received_disconnect:
+                    logging.warning("Explicit disconnect received from Receiver.")
+                    break
 
                 if not cast.socket_client.is_connected:
                     logging.warning("Chromecast connection lost.")

@@ -287,6 +287,24 @@
         options.touchScreenOptimizedApp = true;
         context.start(options);
         console.log("Receiver Context Started");
+        
+        // Handle Unload / Close
+        window.addEventListener('beforeunload', () => {
+            console.log("Receiver is closing...");
+            const senderId = context.getSenders()[0]; // Try to get the first sender
+            if (senderId) {
+                context.sendCustomMessage(NAMESPACE, senderId.senderId, { type: 'DISCONNECT', reason: 'Application closing' });
+            } else {
+                // Broadcast to all if specific sender not found or for general notification
+                // Note: sendCustomMessage typically requires a senderId.
+                // CAF documentation suggests using broadcast logic if supported, 
+                // but here we iterate or just try to catch the connected sender.
+                 const senders = context.getSenders();
+                 senders.forEach(sender => {
+                     context.sendCustomMessage(NAMESPACE, sender.senderId, { type: 'DISCONNECT', reason: 'Application closing' });
+                 });
+            }
+        });
     </script>
 </body>
 </html>
