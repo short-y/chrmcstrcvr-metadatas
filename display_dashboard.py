@@ -190,15 +190,22 @@ def play_dashboard(device_name, app_id=None):
         print(f"Launching Custom App ID: {app_id}")
         try:
             cast.start_app(app_id) # Custom Receiver
-            time.sleep(2) # Wait for app to load
+            time.sleep(5) # Wait longer for app to load and initialize Media Manager
         except pychromecast.error.RequestFailed:
             print(f"Error: Failed to launch App ID {app_id}.")
             sys.exit(1)
+            
+        # Verify App ID matches
+        cast.socket_client.receiver_controller.update_status()
+        if cast.status and cast.status.app_id != app_id:
+            print(f"WARNING: Active App ID is {cast.status.app_id}, expected {app_id}.")
+            print("The custom receiver may have failed to load, falling back to Default Receiver.")
     else:
         print("Launching Default Media Receiver")
 
     # Play the Silent Stream to keep the device awake
     # This is CRITICAL. Without this, Ambient Mode will kick in.
+    print(f"Starting Silent Audio Loop on App ID: {cast.status.app_id if cast.status else 'Unknown'}...")
     mc.play_media(SILENT_STREAM_URL, SILENT_STREAM_TYPE, stream_type="BUFFERED", title=DEFAULT_TITLE, thumb=DEFAULT_IMAGE_URL, metadata=metadata)
     mc.block_until_active()
     print("Dashboard started (Silent Audio Playing)!")
