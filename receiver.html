@@ -124,17 +124,15 @@
     
     <!-- 
       Standard CAF Media Player. 
-      We keep it in the DOM but make it invisible so CAF handles the session state correctly. 
-      'display: none' can sometimes detach functionality.
+      Moved off-screen to ensure it is rendered by the browser (preventing Ambient Mode) 
+      but not visible to the user.
     -->
     <cast-media-player style="
         position: absolute; 
-        top: 0; 
-        left: 0; 
-        width: 1px; 
-        height: 1px; 
-        opacity: 0.01; 
-        pointer-events: none;
+        top: -10000px; 
+        left: -10000px; 
+        width: 100px; 
+        height: 100px; 
     "></cast-media-player>
     
     <script>
