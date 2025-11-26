@@ -26,12 +26,18 @@ class RadioController(BaseController):
     def __init__(self):
         super(RadioController, self).__init__(NAMESPACE)
         self.received_disconnect = False
+        self.pong_received = threading.Event()
 
     def receive_message(self, message, data):
         """
         Called when a message is received from the receiver.
         """
         logging.debug(f"RadioController: Received message -> {data}")
+        
+        if data.get('type') == 'PONG':
+            self.pong_received.set()
+            return True
+            
         if data.get('type') == 'DISCONNECT':
              logging.warning("Receiver sent DISCONNECT signal.")
              self.received_disconnect = True
@@ -53,14 +59,23 @@ class RadioController(BaseController):
         self.send_message(msg)
 
     def send_keepalive(self):
-        """Sends a ping to keep connection alive/detect disconnects."""
-        # Sending a message with just 'type' or empty data.
-        # The receiver logic checks for 'data.title', so this won't affect UI.
+        """
+        Sends a PING and waits for a PONG.
+        Returns True if PONG received within timeout, False otherwise.
+        """
         try:
+            self.pong_received.clear()
             self.send_message({"type": "PING"})
-            return True
+            
+            # Wait for PONG (3 seconds timeout)
+            if self.pong_received.wait(timeout=3.0):
+                return True
+            else:
+                logging.debug("Keepalive: PING sent but no PONG received (Timeout).")
+                return False
+                
         except Exception as e:
-            logging.debug(f"Keepalive failed: {e}")
+            logging.debug(f"Keepalive failed (Exception): {e}")
             return False
 
 
