@@ -276,7 +276,10 @@
                  const data = event.data;
                  if (data.type === 'PING') {
                      console.log("Ping received, sending Pong");
-                     context.sendCustomMessage(NAMESPACE, event.senderId, { type: 'PONG' });
+                     context.sendCustomMessage(NAMESPACE, event.senderId, { 
+                        type: 'PONG',
+                        visibilityState: document.visibilityState
+                     });
                      return;
                  }
                  updateUI(data.title, data.artist, data.image, data.album, data.time);

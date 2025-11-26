@@ -35,6 +35,11 @@ class RadioController(BaseController):
         logging.debug(f"RadioController: Received message -> {data}")
         
         if data.get('type') == 'PONG':
+            visibility = data.get('visibilityState', 'unknown')
+            logging.debug(f"PONG received. Receiver Visibility: {visibility}")
+            if visibility == 'hidden':
+                logging.warning("Receiver reports it is HIDDEN (background/screensaver).")
+                
             self.pong_received.set()
             return True
             
@@ -348,21 +353,31 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             print("--- Detected KOZT Stream. Using Amperwave JSON API for Metadata ---")
             last_song_title = None
             last_artist_name = None
+            last_heartbeat_time = time.time()
             
             while True:
+                # Heartbeat Log
+                if time.time() - last_heartbeat_time > 30:
+                    logging.info(f"Heartbeat: Sender is alive. Current App ID: {cast.status.app_id if cast.status else 'Unknown'}")
+                    last_heartbeat_time = time.time()
+
                 # 1. Keepalive / Status Check
                 try:
                     # Update standard status
                     cast.socket_client.receiver_controller.update_status()
+                    
                     # Send custom ping to ensure app pipe is open
+                    logging.debug("Sending Ping...")
                     keepalive_success = radio_controller.send_keepalive()
                     if not keepalive_success:
+                        logging.warning("Ping Failed!")
                         raise Exception("Keepalive PING failed")
                     
                     consecutive_errors = 0 # Reset on success
+                    logging.debug("Ping Successful.")
                 except Exception as e:
                     consecutive_errors += 1
-                    logging.debug(f"Connection Check Failed ({consecutive_errors}/3): {e}")
+                    logging.warning(f"Connection Check Failed ({consecutive_errors}/3): {e}")
                     if consecutive_errors >= 3:
                         logging.warning("Too many connection errors. Assuming disconnected.")
                         break
@@ -415,22 +430,33 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             monitor_thread.start()
             
             last_ping_time = time.time()
+            last_heartbeat_time = time.time()
 
             while True:
+                # Heartbeat Log every 30s
+                if time.time() - last_heartbeat_time > 30:
+                    logging.info(f"Heartbeat: Sender is alive. Current App ID: {cast.status.app_id if cast.status else 'Unknown'}")
+                    last_heartbeat_time = time.time()
+
                 try:
                     # Update status frequently
                     cast.socket_client.receiver_controller.update_status()
                     
                     # Send Ping every 10 seconds
                     if time.time() - last_ping_time > 10:
+                         logging.debug("Sending Ping...")
                          if not radio_controller.send_keepalive():
+                             logging.warning("Ping Failed!")
                              raise Exception("Keepalive PING failed")
+                         
+                         # Only reset consecutive errors if Ping succeeded
+                         consecutive_errors = 0 
                          last_ping_time = time.time()
+                         logging.debug("Ping Successful.")
 
-                    consecutive_errors = 0
                 except Exception as e:
                     consecutive_errors += 1
-                    logging.debug(f"Connection Check Failed ({consecutive_errors}/3): {e}")
+                    logging.warning(f"Connection Check Failed ({consecutive_errors}/3): {e}")
                     if consecutive_errors >= 3:
                          logging.warning("Too many connection errors. Assuming disconnected.")
                          break
