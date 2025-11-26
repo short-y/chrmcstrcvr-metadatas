@@ -273,6 +273,10 @@
         context.addCustomMessageListener(NAMESPACE, (event) => {
             if (event.data) {
                  const data = event.data;
+                 if (data.type === 'PING') {
+                     console.log("Ping received");
+                     return;
+                 }
                  updateUI(data.title, data.artist, data.image, data.album, data.time);
             }
         });

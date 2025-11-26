@@ -40,6 +40,17 @@ class RadioController(BaseController):
             logging.debug(f"  Image: {image_url}")
         self.send_message(msg)
 
+    def send_keepalive(self):
+        """Sends a ping to keep connection alive/detect disconnects."""
+        # Sending a message with just 'type' or empty data.
+        # The receiver logic checks for 'data.title', so this won't affect UI.
+        try:
+            self.send_message({"type": "PING"})
+            return True
+        except Exception as e:
+            logging.debug(f"Keepalive failed: {e}")
+            return False
+
 
 def resolve_playlist(url):
     """
@@ -144,7 +155,7 @@ def metadata_monitor(stream_url, controller, stop_event):
                         if stop_event.is_set(): return
                         # Read small chunks to avoid blocking forever
                         chunk_size = min(bytes_to_read, 8192) 
-                        chunk = r.raw.read(chunk_size)
+                        chunk = r.raw.read(chunk_size) 
                         if not chunk:
                             raise Exception("Stream ended")
                         bytes_to_read -= len(chunk)
@@ -302,6 +313,8 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     stop_event = threading.Event()
     browser_discovery_active = True
     
+    consecutive_errors = 0
+
     try:
         # KOZT SPECIFIC LOGIC - Check explicit flag first
         if is_kozt_station or "kozt" in stream_url.lower():
@@ -310,21 +323,33 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             last_artist_name = None
             
             while True:
-                # Force a status update to ensure we know what app is running
+                # 1. Keepalive / Status Check
                 try:
+                    # Update standard status
                     cast.socket_client.receiver_controller.update_status()
+                    # Send custom ping to ensure app pipe is open
+                    keepalive_success = radio_controller.send_keepalive()
+                    if not keepalive_success:
+                        raise Exception("Keepalive PING failed")
+                    
+                    consecutive_errors = 0 # Reset on success
                 except Exception as e:
-                    logging.debug(f"Failed to update status: {e}")
+                    consecutive_errors += 1
+                    logging.debug(f"Connection Check Failed ({consecutive_errors}/3): {e}")
+                    if consecutive_errors >= 3:
+                        logging.warning("Too many connection errors. Assuming disconnected.")
+                        break
 
-                # Check if app is still running and connection is alive
+                # 2. Check logical connection state
                 if not cast.socket_client.is_connected:
-                    logging.warning("Chromecast connection lost.")
+                    logging.warning("Chromecast connection lost (socket).")
                     break
                 
                 if cast.status and cast.status.app_id != app_id:
                     logging.warning(f"App ID changed to {cast.status.app_id} (expected {app_id}). Relaunching...")
                     break
                 
+                # 3. App Logic (Fetch Data)
                 song_title, artist_name, fetched_image_url, album_name, track_time = scrape_kozt_now_playing()
                 
                 if song_title and artist_name and (song_title != last_song_title or artist_name != last_artist_name):
@@ -343,8 +368,10 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                     
                     try:
                         radio_controller.send_track_update(song_title, artist_name, final_image_url, album_name, track_time)
+                        consecutive_errors = 0
                     except Exception as e:
                         logging.debug(f"KOZT Monitor: Send failed: {e}")
+                        # If send fails here, the next loop's keepalive will likely catch it too
                 
                 time.sleep(10) # Refresh every 10 seconds
         
@@ -355,11 +382,26 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             monitor_thread.daemon = True
             monitor_thread.start()
             
+            last_ping_time = time.time()
+
             while True:
                 try:
+                    # Update status frequently
                     cast.socket_client.receiver_controller.update_status()
-                except Exception:
-                    pass
+                    
+                    # Send Ping every 10 seconds
+                    if time.time() - last_ping_time > 10:
+                         if not radio_controller.send_keepalive():
+                             raise Exception("Keepalive PING failed")
+                         last_ping_time = time.time()
+
+                    consecutive_errors = 0
+                except Exception as e:
+                    consecutive_errors += 1
+                    logging.debug(f"Connection Check Failed ({consecutive_errors}/3): {e}")
+                    if consecutive_errors >= 3:
+                         logging.warning("Too many connection errors. Assuming disconnected.")
+                         break
 
                 if not cast.socket_client.is_connected:
                     logging.warning("Chromecast connection lost.")
