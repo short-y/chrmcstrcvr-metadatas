@@ -298,6 +298,8 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     # If KOZT, try to get initial metadata for play_media call
     initial_title = title
     initial_image_url = image_url
+    initial_album = None
+    initial_time = None
     if is_kozt_station:
         kozt_title, kozt_artist, kozt_image, kozt_album, kozt_time = scrape_kozt_now_playing()
         if kozt_title and kozt_artist:
@@ -307,7 +309,11 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             else:
                 # If KOZT API has no image, try iTunes
                 initial_image_url = fetch_album_art(kozt_artist, kozt_title)
-            print(f"Initial KOZT metadata: {initial_title} / Image: {initial_image_url}")
+            
+            initial_album = kozt_album
+            initial_time = kozt_time
+            
+            print(f"Initial KOZT metadata: {initial_title} / Image: {initial_image_url} / Album: {initial_album} / Time: {initial_time}")
         else:
             print("Warning: Failed to get initial KOZT metadata. Using provided defaults.")
 
@@ -320,6 +326,10 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         "subtitle": DEFAULT_SUBTITLE,
         "images": [{"url": initial_image_url}] if initial_image_url else []
     }
+    if initial_album:
+        metadata["albumName"] = initial_album
+    if initial_time:
+        metadata["trackTime"] = initial_time
 
     # Launch Default Media Receiver and play
     if app_id:
@@ -341,7 +351,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         # But explicitly setting it helps if we want to switch apps
         # cast.start_app("CC1AD845") # Default Media Receiver ID
 
-    mc.play_media(stream_url, stream_type, stream_type="LIVE", title=initial_title, thumb=initial_image_url, metadata=metadata)
+    mc.play_media(stream_url, stream_type, stream_type="LIVE", title=initial_title, thumb=initial_image_url, album_name=initial_album, metadata=metadata)
     mc.block_until_active()
     print("Playback started!")
     
