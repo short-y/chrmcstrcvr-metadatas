@@ -36,10 +36,14 @@ class RadioController(BaseController):
         
         if data.get('type') == 'PONG':
             visibility = data.get('visibilityState', 'unknown')
-            logging.debug(f"PONG received. Receiver Visibility: {visibility}")
+            standby = data.get('standbyState', 'unknown')
+            logging.debug(f"PONG received. Visibility: {visibility}, Standby: {standby}")
+            
             if visibility == 'hidden':
                 logging.warning("Receiver reports it is HIDDEN (background/screensaver).")
-                
+            if standby == 'STANDBY':
+                 logging.warning("Receiver reports it is in STANDBY mode.")
+
             self.pong_received.set()
             return True
             

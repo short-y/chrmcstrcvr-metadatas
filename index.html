@@ -276,7 +276,16 @@
                  const data = event.data;
                  if (data.type === 'PING') {
                      console.log("Ping received, sending Pong");
-                     context.sendCustomMessage(NAMESPACE, event.senderId, { type: 'PONG' });
+                     let standbyState = 'unknown';
+                     try {
+                        standbyState = context.getStandbyState();
+                     } catch(e) {}
+                     
+                     context.sendCustomMessage(NAMESPACE, event.senderId, { 
+                        type: 'PONG',
+                        visibilityState: document.visibilityState,
+                        standbyState: standbyState
+                     });
                      return;
                  }
                  updateUI(data.title, data.artist, data.image, data.album, data.time);
