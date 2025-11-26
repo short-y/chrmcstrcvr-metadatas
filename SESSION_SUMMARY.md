@@ -1,10 +1,10 @@
-# Session Summary: Chromecast Radio Receiver (v2.2 - Finalized)
+# Session Summary: Chromecast Radio Receiver (v2.3 - Stable)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream_v2.py` - v2.2):** 
+- **Sender (`play_radio_stream_v2.py` - v2.3):** 
     - **WORKING:** Fully functional and robust.
     - **Features:**
         - **KOZT-Specific Metadata:** Fetches title, artist, album, time, and `largeimage` (album art) directly from Amperwave JSON API (`https://api-nowplaying.amperwave.net/api/v1/prtplus/nowplaying/10/4756/nowplaying.json`) for KOZT streams.
@@ -13,6 +13,7 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
         - **Auto-reconnection:** Detects Chromecast disconnection or app exit, and automatically attempts to relaunch the app and resume monitoring.
         - **Graceful Exit:** Handles `Ctrl+C` (`KeyboardInterrupt`) cleanly to stop the script without restarting.
         - **Configurable Debugging:** Verbose debug messages are now hidden by default and enabled only when the `--debug` flag is used.
+        - **[New] Connection Keepalive:** Implemented a `PING` message sent every ~10 seconds to the receiver to ensure the connection is alive. If 3 consecutive checks fail, the sender treats it as a disconnect and attempts to reconnect/relaunch.
 - **Receiver (`index.html` / `receiver.html` - v4.1):** 
     - **WORKING:** Displays custom UI correctly with track title, artist, album name, track time, and album art.
     - **Fixes Applied:**
@@ -22,6 +23,8 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
         4.  **`touchScreenOptimizedApp`:** Enabled this option in `CastReceiverOptions` to explicitly signal custom touch handling.
         5.  **`disableIdleTimeout`:** Enabled to prevent the app from closing prematurely.
         6.  **New Metadata Fields:** Added display for Album Name and Track Time.
+        7.  **[New] Ping Handler:** Explicitly handles `PING` messages from the sender (logging "Ping received") to prevent UI errors and aid in debugging.
+        8.  **[New] Version Comment:** Added an HTML comment `<!-- Receiver Version: ... -->` in the body for easy version verification via "View Source".
 
 **Next Steps for Future Session:**
 - The core functionality is robust and working. Further enhancements would be new feature requests.
