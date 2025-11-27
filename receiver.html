@@ -156,16 +156,27 @@
             opacity: 0 !important;
             pointer-events: none !important;
             z-index: -10 !important;
+            
+            /* CAF Specific CSS Variables to Hide UI */
+            --logo-image: none;
+            --background-image: none;
+            --splash-image: none;
+            --watermark-image: none;
+            --playback-logo-image: none;
+            --progress-bar-color: transparent;
+            --seek-play-pause-color: transparent;
+            --buffer-color: transparent;
+            background: transparent !important;
         }
     </style>
 </head>
 
 <body>
-    <!-- Receiver Version: v5.10 -->
+    <!-- Receiver Version: v5.11 -->
 
     <div id="custom-ui">
         <div id="bg-image"></div>
-        <div id="version-tag">v5.10</div>
+        <div id="version-tag">v5.11</div>
         <div id="local-clock">--:--</div>
         <div id="album-art"></div>
         <div id="song-title">Loading...</div>
@@ -183,6 +194,28 @@
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
+
+        // Attempt to hide Shadow DOM elements of the player
+        function hidePlayerInternals() {
+            const player = document.getElementById('keepAlivePlayer');
+            if (player && player.shadowRoot) {
+                const style = document.createElement('style');
+                style.textContent = `
+                    .background, .logo, .watermark, .splash, .controls, .progress-bar, .seek-play-pause, .overlay {
+                        display: none !important;
+                        opacity: 0 !important;
+                    }
+                `;
+                player.shadowRoot.appendChild(style);
+                console.log("Injected styles into cast-media-player shadow root.");
+            } else {
+                // Retry if shadow root isn't ready yet
+                setTimeout(hidePlayerInternals, 500);
+            }
+        }
+        // Call initially and periodically to ensure it sticks
+        hidePlayerInternals();
+        setInterval(hidePlayerInternals, 5000);
 
         let pollInterval = null;
 
