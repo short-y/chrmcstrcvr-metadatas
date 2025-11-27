@@ -455,7 +455,12 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                         logging.debug(f"KOZT Monitor: Send failed: {e}")
                         # If send fails here, the next loop's keepalive will likely catch it too
                 
-                time.sleep(random.randint(10, 25)) # Random refresh interval
+                # Random refresh interval for next poll
+                sleep_delay = random.randint(10, 25)
+                logging.debug(f"KOZT Monitor: Waiting {sleep_delay} seconds until next refresh.")
+                time.sleep(sleep_delay)
+        
+        # GENERIC ICECAST LOGIC
         
         # GENERIC ICECAST LOGIC
         else:
