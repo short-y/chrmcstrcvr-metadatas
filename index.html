@@ -118,6 +118,14 @@
             position: relative;
             z-index: 10;
         }
+        /* Hidden media player for keep-alive */
+        cast-media-player#keepAlivePlayer {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -126,180 +134,208 @@
 
     <div id="bg-image"></div>
     <div id="version-tag">v5.0 (Stable)</div>
-    const playerManager = context.getPlayerManager();
-    const NAMESPACE = 'urn:x-cast:com.example.radio';
+    <div id="album-art"></div>
+    <div id="song-title">Loading...</div>
+    <div id="artist-name"></div>
+    <div id="album-name"></div>
+    <div id="track-time"></div>
+    <cast-media-player id="keepAlivePlayer"></cast-media-player>
+    <script>
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = context.getPlayerManager();
+        const NAMESPACE = 'urn:x-cast:com.example.radio';
 
-    let pollInterval = null;
+        let pollInterval = null;
 
-    function updateUI(title, artist, imageUrl, album, time) {
-    console.log("Updating UI -> Title:", title, "Artist:", artist);
-    const titleEl = document.getElementById('song-title');
-    const artistEl = document.getElementById('artist-name');
-    const albumEl = document.getElementById('album-name');
-    const timeEl = document.getElementById('track-time');
-    const artEl = document.getElementById('album-art');
-    const bgEl = document.getElementById('bg-image');
+        function updateUI(title, artist, imageUrl, album, time) {
+            console.log("Updating UI -> Title:", title, "Artist:", artist);
+            const titleEl = document.getElementById('song-title');
+            const artistEl = document.getElementById('artist-name');
+            const albumEl = document.getElementById('album-name');
+            const timeEl = document.getElementById('track-time');
+            const artEl = document.getElementById('album-art');
+            const bgEl = document.getElementById('bg-image');
 
-    if (title && title !== "") titleEl.textContent = title;
-    if (artist && artist !== "") artistEl.textContent = artist;
-    if (album) albumEl.textContent = album;
-    if (time) timeEl.textContent = time;
+            if (title && title !== "") titleEl.textContent = title;
+            if (artist && artist !== "") artistEl.textContent = artist;
+            if (album) albumEl.textContent = album;
+            if (time) timeEl.textContent = time;
 
-    if (imageUrl) {
-    artEl.style.backgroundImage = `url('${imageUrl}')`;
-    artEl.style.backgroundSize = 'cover';
-    bgEl.style.backgroundImage = `url('${imageUrl}')`;
-    }
-    }
-
-    // ... [Helpers] ...
-    function parseIcecastString(rawString) {
-    if (!rawString) return { title: null, artist: null };
-    const parts = rawString.split(' - ');
-    if (parts.length >= 2) {
-    return { artist: parts[0].trim(), title: parts.slice(1).join(' - ').trim() };
-    }
-    return { title: rawString.trim(), artist: "" };
-    }
-
-    function guessIcecastStatusUrl(streamUrl) {
-    try {
-    const url = new URL(streamUrl);
-    return `${url.protocol}//${url.host}/status-json.xsl`;
-    } catch (e) {
-    return null;
-    }
-    }
-
-    function startIcecastPolling(statusUrl, mountpoint) {
-    if (pollInterval) clearInterval(pollInterval);
-    console.log("Starting Icecast polling on:", statusUrl);
-
-    const fetchMetadata = () => {
-    fetch(statusUrl)
-    .then(res => res.json())
-    .then(data => {
-    let sources = data.icestats && data.icestats.source;
-    if (!sources) return;
-    if (!Array.isArray(sources)) sources = [sources];
-
-    let activeSource = null;
-    if (mountpoint) {
-    activeSource = sources.find(s => s.listenurl && s.listenurl.endsWith(mountpoint));
-    }
-    if (!activeSource && sources.length > 0) activeSource = sources[0];
-
-    if (activeSource && activeSource.title) {
-    const { title, artist } = parseIcecastString(activeSource.title);
-    console.log("Polled Icecast:", title, artist);
-    updateUI(title, artist, null);
-    }
-    })
-    .catch(err => console.log("Icecast poll failed:", err));
-    };
-    fetchMetadata();
-    pollInterval = setInterval(fetchMetadata, 10000);
-    }
-
-    function readEmbeddedTags(url) {
-    console.log("Attempting to read embedded tags from:", url);
-    try {
-    if (typeof jsmediatags === 'undefined') {
-    console.error("jsmediatags library failed to load!");
-    return;
-    }
-    new jsmediatags.Reader(url)
-    .setTagsToRead(["title", "artist", "picture"])
-    .read({
-    onSuccess: function(tag) {
-    console.log("jsmediatags found tags:", tag.tags.title);
-    const tags = tag.tags;
-    let image = null;
-    if (tags.picture) {
-    const { data, format } = tags.picture;
-    let base64String = "";
-    for (let i = 0; i < data.length; i++) { base64String +=String.fromCharCode(data[i]); }
-        image=`data:${format};base64,${window.btoa(base64String)}`; } updateUI(tags.title, tags.artist, image); },
-        onError: function(error) { console.log("jsmediatags error:", error.type, error.info); } }); } catch(e) {
-        console.error("Error initializing jsmediatags:", e); } } // Events playerManager.addEventListener(
-        cast.framework.events.EventType.MEDIA_STATUS, (event)=> {
-        if (event.mediaStatus && event.mediaStatus.media && event.mediaStatus.media.metadata) {
-        const meta = event.mediaStatus.media.metadata;
-        if (meta.title) {
-        console.log("Native Metadata Update:", meta.title);
-        updateUI(meta.title, meta.artist || meta.subtitle, (meta.images && meta.images[0]) ? meta.images[0].url : null,
-        meta.albumName, null);
+            if (imageUrl) {
+                artEl.style.backgroundImage = `url('${imageUrl}')`;
+                artEl.style.backgroundSize = 'cover';
+                bgEl.style.backgroundImage = `url('${imageUrl}')`;
+            }
         }
+
+        // ... [Helpers] ...
+        function parseIcecastString(rawString) {
+            if (!rawString) return { title: null, artist: null };
+            const parts = rawString.split(' - ');
+            if (parts.length >= 2) {
+                return { artist: parts[0].trim(), title: parts.slice(1).join(' - ').trim() };
+            }
+            return { title: rawString.trim(), artist: "" };
         }
+
+        function guessIcecastStatusUrl(streamUrl) {
+            try {
+                const url = new URL(streamUrl);
+                return `${url.protocol}//${url.host}/status-json.xsl`;
+            } catch (e) {
+                return null;
+            }
         }
+
+        function startIcecastPolling(statusUrl, mountpoint) {
+            if (pollInterval) clearInterval(pollInterval);
+            console.log("Starting Icecast polling on:", statusUrl);
+
+            const fetchMetadata = () => {
+                fetch(statusUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                        let sources = data.icestats && data.icestats.source;
+                        if (!sources) return;
+                        if (!Array.isArray(sources)) sources = [sources];
+
+                        let activeSource = null;
+                        if (mountpoint) {
+                            activeSource = sources.find(s => s.listenurl && s.listenurl.endsWith(mountpoint));
+                        }
+                        if (!activeSource && sources.length > 0) activeSource = sources[0];
+
+                        if (activeSource && activeSource.title) {
+                            const { title, artist } = parseIcecastString(activeSource.title);
+                            console.log("Polled Icecast:", title, artist);
+                            updateUI(title, artist, null);
+                        }
+                    })
+                    .catch(err => console.log("Icecast poll failed:", err));
+            };
+            fetchMetadata();
+            pollInterval = setInterval(fetchMetadata, 10000);
+        }
+
+        function readEmbeddedTags(url) {
+            console.log("Attempting to read embedded tags from:", url);
+            try {
+                if (typeof jsmediatags === 'undefined') {
+                    console.error("jsmediatags library failed to load!");
+                    return;
+                }
+                new jsmediatags.Reader(url)
+                    .setTagsToRead(["title", "artist", "picture"])
+                    .read({
+                        onSuccess: function(tag) {
+                            console.log("jsmediatags found tags:", tag.tags.title);
+                            const tags = tag.tags;
+                            let image = null;
+                            if (tags.picture) {
+                                const { data, format } = tags.picture;
+                                let base64String = "";
+                                for (let i = 0; i < data.length; i++) {
+                                    base64String += String.fromCharCode(data[i]);
+                                }
+                                image = `data:${format};base64,${window.btoa(base64String)}`;
+                            }
+                            updateUI(tags.title, tags.artist, image);
+                        },
+                        onError: function(error) {
+                            console.log("jsmediatags error:", error.type, error.info);
+                        }
+                    });
+            } catch (e) {
+                console.error("Error initializing jsmediatags:", e);
+            }
+        }
+
+        // Events
+        playerManager.addEventListener(
+            cast.framework.events.EventType.MEDIA_STATUS, (event) => {
+                if (event.mediaStatus && event.mediaStatus.media && event.mediaStatus.media.metadata) {
+                    const meta = event.mediaStatus.media.metadata;
+                    if (meta.title) {
+                        console.log("Native Metadata Update:", meta.title);
+                        updateUI(meta.title, meta.artist || meta.subtitle, (meta.images && meta.images[0]) ? meta.images[0].url : null, meta.albumName, null);
+                    }
+                }
+            }
         );
 
         playerManager.setMessageInterceptor(
-        cast.framework.messages.MessageType.LOAD,
-        request => {
-        console.log("LOAD Request:", request);
-        if (request.media && request.media.contentId) {
-        const streamUrl = request.media.contentId;
-        readEmbeddedTags(streamUrl);
-        const statusUrl = guessIcecastStatusUrl(streamUrl);
-        if (statusUrl) {
-        let mountpoint = null;
-        try {
-        const u = new URL(streamUrl);
-        mountpoint = u.pathname;
-        } catch(e) {}
-        startIcecastPolling(statusUrl, mountpoint);
-        }
-        }
-        return request;
-        }
+            cast.framework.messages.MessageType.LOAD,
+            request => {
+                console.log("LOAD Request:", request);
+                if (request.media && request.media.contentId) {
+                    const streamUrl = request.media.contentId;
+                    readEmbeddedTags(streamUrl);
+                    const statusUrl = guessIcecastStatusUrl(streamUrl);
+                    if (statusUrl) {
+                        let mountpoint = null;
+                        try {
+                            const u = new URL(streamUrl);
+                            mountpoint = u.pathname;
+                        } catch (e) {}
+                        startIcecastPolling(statusUrl, mountpoint);
+                    }
+                }
+                return request;
+            }
         );
 
         // CUSTOM MESSAGE LISTENER
         console.log("Registering Custom Message Listener for:", NAMESPACE);
         context.addCustomMessageListener(NAMESPACE, (event) => {
-        if (event.data) {
-        const data = event.data;
-        if (data.type === 'PING') {
-        console.log("Ping received, sending Pong");
-        let standbyState = 'unknown';
-        try {
-        standbyState = context.getStandbyState();
-        } catch(e) {}
+            if (event.data) {
+                const data = event.data;
+                if (data.type === 'PING') {
+                    console.log("Ping received, sending Pong");
+                    let standbyState = 'unknown';
+                    try {
+                        standbyState = context.getStandbyState();
+                    } catch (e) {}
 
-        context.sendCustomMessage(NAMESPACE, event.senderId, {
-        type: 'PONG',
-        visibilityState: document.visibilityState,
-        standbyState: standbyState
-        });
-        return;
-        }
-        updateUI(data.title, data.artist, data.image, data.album, data.time);
-        }
+                    context.sendCustomMessage(NAMESPACE, event.senderId, {
+                        type: 'PONG',
+                        visibilityState: document.visibilityState,
+                        standbyState: standbyState
+                    });
+                    return;
+                }
+                updateUI(data.title, data.artist, data.image, data.album, data.time);
+            }
         });
 
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
+        options.maxInactivity = 3600; // Allow long inactivity
         options.touchScreenOptimizedApp = true;
         context.start(options);
         console.log("Receiver Context Started");
 
+        // Keep-alive heartbeat (every 30s) to prevent Ambient Mode
+        // We use a background network request instead of interrupting the main player.
+        setInterval(() => {
+            fetch('https://www.google.com/favicon.ico?t=' + Date.now(), { mode: 'no-cors' }).catch(() => {});
+        }, 30000);
+
         // Handle Unload / Close
         window.addEventListener('beforeunload', () => {
-        console.log("Receiver is closing...");
-        const senderId = context.getSenders()[0]; // Try to get the first sender
-        if (senderId) {
-        context.sendCustomMessage(NAMESPACE, senderId.senderId, { type: 'DISCONNECT', reason: 'Application closing' });
-        } else {
-        // Broadcast to all if specific sender not found or for general notification
-        // Note: sendCustomMessage typically requires a senderId.
-        // CAF documentation suggests using broadcast logic if supported,
-        // but here we iterate or just try to catch the connected sender.
-        const senders = context.getSenders();
-        senders.forEach(sender => {
-        context.sendCustomMessage(NAMESPACE, sender.senderId, { type: 'DISCONNECT', reason: 'Application closing' });
-        });
-        }
+            console.log("Receiver is closing...");
+            const senderId = context.getSenders()[0]; // Try to get the first sender
+            if (senderId) {
+                context.sendCustomMessage(NAMESPACE, senderId.senderId, { type: 'DISCONNECT', reason: 'Application closing' });
+            } else {
+                // Broadcast to all if specific sender not found or for general notification
+                // Note: sendCustomMessage typically requires a senderId.
+                // CAF documentation suggests using broadcast logic if supported,
+                // but here we iterate or just try to catch the connected sender.
+                const senders = context.getSenders();
+                senders.forEach(sender => {
+                    context.sendCustomMessage(NAMESPACE, sender.senderId, { type: 'DISCONNECT', reason: 'Application closing' });
+                });
+            }
         });
         </script>
 </body>

@@ -15,12 +15,14 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
 - **Receiver (`index.html` / `receiver.html` - v5.0):** 
     - **WORKING:** Displays custom UI correctly and stays awake.
     - **Key Architecture:**
-        - **Invisible `cast-media-player`:** We restored the standard `<cast-media-player>` element but made it invisible using `opacity: 0; z-index: -10; pointer-events: none;`.
+        - **Invisible `cast-media-player`:** We restored the standard `<cast-media-player>` element but made it invisible using `opacity: 0; z-index: -10; pointer-events: none;`. Now with `id="keepAlivePlayer"`.
         - **Why:** This is CRITICAL. It ensures the Cast Application Framework (CAF) correctly binds the media session state (`PLAYING`/`BUFFERING`). This state is required to prevent the Nest Hub from aggressively triggering Ambient Mode (screensaver).
     - **Features:**
+        - **Ambient Mode Prevention:** Implemented `maxInactivity=3600` and a 30s background image fetch heartbeat to further prevent Nest Hub from entering Ambient Mode.**
         - **Ping/Pong:** Responds to `PING` with `PONG`, including `visibilityState` and `standbyState`.
         - **Exit Signal:** Sends `DISCONNECT` message to sender on `window.beforeunload`.
         - **Metadata:** Updates Title, Artist, Album, Time, and Art via Custom Messages or Native Media Status.
+    - **`receiver.html` Sync:** `receiver.html` is maintained as an exact copy of `index.html`.
 
 **History of "Ambient Mode" Fixes:**
 1.  `disableIdleTimeout: true` in JS: Necessary but insufficient on its own for Nest Hubs.
