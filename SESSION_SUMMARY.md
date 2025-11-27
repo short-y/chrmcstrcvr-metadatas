@@ -34,7 +34,8 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
 **Repo Info:**
 - Working Directory: `/home/tsumrall/git/Chromecast`
 - Remote Repo: `https://github.com/short-y/chrmcstrcvr-metadatas.git`
-- GitHub Pages URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
+- Receiver URL: `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
+- Web App URL: `https://short-y.github.io/chrmcstrcvr-metadatas/webapp.html`
 
 **Commands to Resume:**
 1.  Activate venv: `source venv/bin/activate`
