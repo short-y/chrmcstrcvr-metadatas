@@ -1,3 +1,4 @@
+import random
 import argparse
 import sys
 import time
@@ -454,7 +455,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                         logging.debug(f"KOZT Monitor: Send failed: {e}")
                         # If send fails here, the next loop's keepalive will likely catch it too
                 
-                time.sleep(10) # Refresh every 10 seconds
+                time.sleep(random.randint(10, 25)) # Random refresh interval
         
         # GENERIC ICECAST LOGIC
         else:
