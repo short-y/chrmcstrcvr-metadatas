@@ -457,7 +457,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
                 
                 # Random refresh interval for next poll
                 sleep_delay = random.randint(10, 25)
-                logging.debug(f"KOZT Monitor: Waiting {sleep_delay} seconds until next refresh.")
+                logging.info(f"KOZT Monitor: Waiting {sleep_delay} seconds until next refresh.")
                 time.sleep(sleep_delay)
         
         # GENERIC ICECAST LOGIC
