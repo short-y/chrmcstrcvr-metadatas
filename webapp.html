@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KOZT Now Playing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Google Sans', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            filter: blur(20px);
+            z-index: -1;
+        }
+
+        #local-clock {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #ddd;
+            font-size: 2.5vh;
+            font-weight: bold;
+            z-index: 10;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        #album-art {
+            width: 30vw;
+            height: 30vw;
+            max-width: 300px;
+            max-height: 300px;
+            background-color: #333;
+            margin-bottom: 2vh;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            transition: background-image 0.5s ease-in-out;
+            position: relative;
+            z-index: 10;
+        }
+
+        #song-title {
+            font-size: 5vw;
+            font-weight: 400;
+            margin: 0 2vw;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+            max-width: 90%;
+            word-wrap: break-word;
+            color: #ffffff;
+        }
+
+        #artist-name {
+            font-size: 3vw;
+            color: #ddd;
+            margin-top: 1vh;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
+        #album-name {
+            font-size: 2.5vw;
+            color: #ccc;
+            margin-top: 0.5vh;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
+        #track-time {
+            font-size: 2vw;
+            color: #aaa;
+            margin-top: 0.5vh;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
+        .status-msg {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bg-image"></div>
+    <div id="local-clock">--:--</div>
+    
+    <div id="album-art"></div>
+    <div id="song-title">Loading...</div>
+    <div id="artist-name"></div>
+    <div id="album-name"></div>
+    <div id="track-time"></div>
+
+    <div class="status-msg" id="status-msg">Ready</div>
+
+    <script>
+        // Configuration
+        const METADATA_API = "https://api-nowplaying.amperwave.net/api/v1/prtplus/nowplaying/10/4756/nowplaying.json";
+        const ITUNES_API = "https://itunes.apple.com/search";
+
+        const statusEl = document.getElementById('status-msg');
+
+        // --- Clock ---
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('local-clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- Metadata Logic ---
+        // Convert station time (like "10:45a") or ISO string to local time string
+        function convertTime(timeStr) {
+            if (!timeStr) return "";
+            
+            // Handle ISO 8601
+            if (timeStr.includes('T') || timeStr.includes('-')) {
+                const d = new Date(timeStr);
+                if (!isNaN(d.getTime())) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            }
+
+            // Handle "10:45a" format (Pacific Time assumption)
+            const match = timeStr.match(/(\d+):(\d+)([ap])/i);
+            if (match) {
+                let [_, h, m, mod] = match;
+                h = parseInt(h);
+                if (mod.toLowerCase() === 'p' && h !== 12) h += 12;
+                if (mod.toLowerCase() === 'a' && h === 12) h = 0;
+                
+                // Assume today, Pacific Time (UTC-8 approx)
+                const now = new Date();
+                // UTC-8 means we add 8 hours to get UTC
+                const utc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), h + 8, m);
+                return new Date(utc).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            }
+            return timeStr;
+        }
+
+        async function fetchItunesArt(artist, title) {
+            try {
+                const query = encodeURIComponent(`${artist} ${title}`);
+                const res = await fetch(`${ITUNES_API}?term=${query}&media=music&limit=1`);
+                const data = await res.json();
+                if (data.resultCount > 0 && data.results[0].artworkUrl100) {
+                    return data.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
+                }
+            } catch (e) {
+                console.log("iTunes fetch failed:", e);
+            }
+            return null;
+        }
+
+        function updateUI(title, artist, album, time, imageUrl) {
+            document.getElementById('song-title').textContent = title || "";
+            document.getElementById('artist-name').textContent = artist || "";
+            document.getElementById('album-name').textContent = album || "";
+            document.getElementById('track-time').textContent = convertTime(time);
+
+            const artEl = document.getElementById('album-art');
+            const bgEl = document.getElementById('bg-image');
+            
+            if (imageUrl) {
+                artEl.style.backgroundImage = `url('${imageUrl}')`;
+                bgEl.style.backgroundImage = `url('${imageUrl}')`;
+            } else {
+                // Clear if no image
+                artEl.style.backgroundImage = '';
+                bgEl.style.backgroundImage = '';
+            }
+        }
+
+        let lastTitle = "";
+
+        async function pollMetadata() {
+            try {
+                statusEl.textContent = "Fetching metadata...";
+                const res = await fetch(METADATA_API);
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                const data = await res.json();
+                
+                if (data.performances && data.performances.length > 0) {
+                    const track = data.performances[0];
+                    const title = track.title;
+                    const artist = track.artist;
+                    const album = track.album;
+                    const time = track.time; // "10:45a" or ISO
+                    
+                    let imageUrl = track.largeimage || track.mediumimage || track.smallimage;
+
+                    // Optimization: Only fetch iTunes if song changed and we have no image
+                    const uniqueId = title + artist;
+                    if (uniqueId !== lastTitle) {
+                        lastTitle = uniqueId;
+                        if (!imageUrl) {
+                            imageUrl = await fetchItunesArt(artist, title);
+                        }
+                        updateUI(title, artist, album, time, imageUrl);
+                        statusEl.textContent = "Last update: " + new Date().toLocaleTimeString();
+                    } else {
+                        statusEl.textContent = "Metadata up-to-date: " + new Date().toLocaleTimeString();
+                    }
+                }
+            } catch (e) {
+                console.error("Metadata poll failed:", e);
+                statusEl.textContent = "Error fetching metadata: " + e.message;
+            }
+        }
+
+        // Poll every 10 seconds
+        setInterval(pollMetadata, 10000);
+        pollMetadata(); // Initial call
+
+    </script>
+</body>
+</html>
