@@ -1,4 +1,4 @@
-# Session Summary: Chromecast Radio Receiver (v5.0 - Robust)
+# Session Summary: Chromecast Radio Receiver (v5.1 - Robust)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
