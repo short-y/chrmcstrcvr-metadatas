@@ -130,10 +130,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.2 -->
+    <!-- Receiver Version: v5.3 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.2</div>
+    <div id="version-tag">v5.3</div>
     <div id="album-art"></div>
     <div id="song-title">Loading...</div>
     <div id="artist-name"></div>
@@ -257,7 +257,7 @@
                     const meta = event.mediaStatus.media.metadata;
                     if (meta.title) {
                         console.log("Native Metadata Update:", meta.title);
-                        updateUI(meta.title, meta.artist || meta.subtitle, (meta.images && meta.images[0]) ? meta.images[0].url : null, meta.albumName, null);
+                        updateUI(meta.title, meta.artist || meta.subtitle, (meta.images && meta.images[0]) ? meta.images[0].url : null, meta.albumName, meta.trackTime);
                     }
                 }
             }
