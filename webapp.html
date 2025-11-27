@@ -234,12 +234,16 @@
             } catch (e) {
                 console.error("Metadata poll failed:", e);
                 statusEl.textContent = "Error fetching metadata: " + e.message;
+            } finally {
+                // Randomize next poll between 10s and 25s
+                const delay = Math.floor(Math.random() * (25000 - 10000 + 1) + 10000);
+                console.log(`Next poll in ${delay}ms`);
+                setTimeout(pollMetadata, delay);
             }
         }
 
-        // Poll every 10 seconds
-        setInterval(pollMetadata, 10000);
-        pollMetadata(); // Initial call
+        // Initial call
+        pollMetadata();
 
     </script>
 </body>

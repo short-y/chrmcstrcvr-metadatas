@@ -4,9 +4,10 @@
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
 
 **Current Status:**
-- **Web App (`webapp.html` - v1.0):**
+- **Web App (`webapp.html` - v1.1):**
     - **NEW:** Standalone "Now Playing" display for browsers.
     - **Features:** Polls KOZT API for metadata (Title, Artist, Album, Time, Art), applies local time conversion, and displays a live clock. No audio playback.
+    - **Updates:** Metadata polling interval is now randomized (10-25s).
 - **Sender (`play_radio_stream_v2.py` - v2.9):** 
     - **WORKING:** Fully functional and robust.
     - **Features:**
