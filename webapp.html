@@ -201,8 +201,16 @@
         }
 
         let lastTitle = "";
+        let pollTimeout = null;
 
         async function pollMetadata() {
+            // If hidden, don't poll. The visibilitychange listener will handle resumption.
+            if (document.hidden) {
+                console.log("Page hidden. Pausing poll.");
+                statusEl.textContent = "Paused (Background)";
+                return;
+            }
+
             try {
                 statusEl.textContent = "Fetching metadata...";
                 const res = await fetch(METADATA_API);
@@ -238,12 +246,34 @@
                 // Randomize next poll between 10s and 25s
                 const delay = Math.floor(Math.random() * (25000 - 10000 + 1) + 10000);
                 console.log(`Next poll in ${delay}ms`);
-                setTimeout(pollMetadata, delay);
+                pollTimeout = setTimeout(pollMetadata, delay);
             }
         }
 
+        // Handle Visibility Change
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                // Clear pending timeout to stop polling
+                if (pollTimeout) {
+                    clearTimeout(pollTimeout);
+                    pollTimeout = null;
+                }
+                statusEl.textContent = "Paused (Background)";
+            } else {
+                // Resume immediately if not already polling (or if timeout was cleared)
+                if (!pollTimeout) {
+                    console.log("Page visible. Resuming poll.");
+                    pollMetadata();
+                }
+            }
+        });
+
         // Initial call
-        pollMetadata();
+        if (!document.hidden) {
+            pollMetadata();
+        } else {
+            statusEl.textContent = "Paused (Background)";
+        }
 
     </script>
 </body>
