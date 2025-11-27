@@ -1,18 +1,18 @@
-# Session Summary: Chromecast Radio Receiver (v5.12)
+# Session Summary: Chromecast Radio Receiver (v5.13)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream_v2.py` - v2.5):** 
+- **Sender (`play_radio_stream_v2.py` - v2.6):** 
     - **WORKING:** Fully functional and robust.
-    - **Updates:** Changed `DEFAULT_STREAM_TYPE` to `video/mp4` to trick CAF into video mode, potentially minimizing persistent audio UI.
-- **Receiver (`index.html` / `receiver.html` - v5.12):** 
+    - **Updates:** Now sends empty metadata in the initial `play_media` call to suppress the Default UI's persistent album art. Real metadata is sent immediately after via a custom message.
+- **Receiver (`index.html` / `receiver.html` - v5.13):** 
     - **WORKING:** Displays custom UI correctly and stays awake.
     - **Key Architecture:**
         - **Hidden `cast-media-player`:** Uses CSS Variables (`--logo-image: none`, etc.) and Shadow DOM Style Injection to make the default player invisible, while keeping it active off-screen.
     - **Features:**
-        - **Time Zone Conversion:** Converts station time (Pacific) to local device time.
+        - **Time Zone Conversion:** Converts ISO 8601 timestamps and station time strings to local device time.
         - **Ambient Mode Prevention:** Implemented `maxInactivity=3600`, hidden player, and 30s heartbeat.
 
 **History of "Ambient Mode" Fixes:**

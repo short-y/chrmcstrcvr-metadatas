@@ -172,11 +172,11 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.12 -->
+    <!-- Receiver Version: v5.13 -->
 
     <div id="custom-ui">
         <div id="bg-image"></div>
-        <div id="version-tag">v5.12</div>
+        <div id="version-tag">v5.13</div>
         <div id="local-clock">--:--</div>
         <div id="album-art"></div>
         <div id="song-title">Loading...</div>
@@ -221,6 +221,15 @@
 
         function convertStationTimeToLocal(timeStr) {
             if (!timeStr) return "";
+            
+            // Check if it's an ISO 8601 timestamp (contains 'T' and 'Z' or '+')
+            if (timeStr.includes('T') || timeStr.includes('-') || timeStr.includes(':')) {
+                const date = new Date(timeStr);
+                if (!isNaN(date.getTime())) {
+                    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                }
+            }
+
             // Expecting format like "10:45a" or "10:45p"
             const match = timeStr.match(/(\d+):(\d+)([ap])/i);
             if (!match) return timeStr; 
@@ -235,17 +244,11 @@
 
             const now = new Date();
             // Assume Station Time is Pacific (UTC-8 approx).
-            // To get UTC, we ADD 8 hours to the Pacific Time.
-            // Note: This ignores Daylight Savings (PDT is UTC-7).
-            // For robustness, a fixed offset of 8 is a reasonable default for KOZT.
             const offsetHours = 8; 
             
-            // Create a UTC date object representing that time in UTC
-            // Date.UTC(y, m, d, h, m)
             const utcTimestamp = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), hours + offsetHours, minutes);
             const localDate = new Date(utcTimestamp);
 
-            // Convert to Local String
             return localDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         }
 

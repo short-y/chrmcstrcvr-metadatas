@@ -319,17 +319,16 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
 
     print(f"Playing {initial_title} ({stream_url})...")
     
-    # Prepare metadata
+    # Prepare minimal metadata to suppress Default UI
     metadata = {
-        "metadataType": 3, # Generic
-        "title": initial_title,
-        "subtitle": DEFAULT_SUBTITLE,
-        "images": [{"url": initial_image_url}] if initial_image_url else []
+        "metadataType": 0, # Generic
+        "title": " ", 
+        "subtitle": " ",
+        "images": []
     }
-    if initial_album:
-        metadata["albumName"] = initial_album
-    if initial_time:
-        metadata["trackTime"] = initial_time
+    
+    # We intentionally do NOT set albumName or trackTime here to keep Default UI clean.
+    # The Custom UI will be populated by the first `send_track_update` message.
 
     # Launch Default Media Receiver and play
     if app_id:
@@ -351,9 +350,14 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         # But explicitly setting it helps if we want to switch apps
         # cast.start_app("CC1AD845") # Default Media Receiver ID
 
-    mc.play_media(stream_url, stream_type, stream_type="LIVE", title=initial_title, thumb=initial_image_url, metadata=metadata)
+    # Use generic title/thumb to avoid Default UI clutter
+    mc.play_media(stream_url, stream_type, stream_type="LIVE", title=" ", thumb=None, metadata=metadata)
     mc.block_until_active()
     print("Playback started!")
+    
+    # Send immediate update with REAL metadata to populate Custom UI
+    time.sleep(1) # Wait for receiver to be ready
+    radio_controller.send_track_update(initial_title, kozt_artist if is_kozt_station else "", initial_image_url, initial_album, initial_time)
     
     # Verify the correct app is running AFTER playback starts
     time.sleep(1) # Allow status to update
