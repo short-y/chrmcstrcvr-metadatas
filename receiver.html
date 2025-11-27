@@ -118,14 +118,23 @@
             position: relative;
             z-index: 10;
         }
+        /* Hidden media player - Required for CAF state */
+        cast-media-player#keepAlivePlayer {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            z-index: -10 !important;
+        }
     </style>
 </head>
 
 <body>
-    <!-- Receiver Version: v5.7 -->
+    <!-- Receiver Version: v5.8 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.7</div>
+    <div id="version-tag">v5.8</div>
     <div id="album-art"></div>
     <div id="song-title">Loading...</div>
     <div id="artist-name"></div>
@@ -133,12 +142,46 @@
     <div id="track-time"></div>
     <!-- Keep-alive image -->
     <img id="keepAlive" style="position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;" />
+    
+    <!-- Restore Player for CAF Keep-Alive -->
+    <cast-media-player id="keepAlivePlayer"></cast-media-player>
+
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
 
         let pollInterval = null;
+
+        function convertStationTimeToLocal(timeStr) {
+            if (!timeStr) return "";
+            // Expecting format like "10:45a" or "10:45p"
+            const match = timeStr.match(/(\d+):(\d+)([ap])/i);
+            if (!match) return timeStr; 
+
+            let [_, hours, minutes, modifier] = match;
+            hours = parseInt(hours, 10);
+            minutes = parseInt(minutes, 10);
+
+            // Convert to 24h
+            if (modifier.toLowerCase() === 'p' && hours !== 12) hours += 12;
+            if (modifier.toLowerCase() === 'a' && hours === 12) hours = 0;
+
+            const now = new Date();
+            // Assume Station Time is Pacific (UTC-8 approx).
+            // To get UTC, we ADD 8 hours to the Pacific Time.
+            // Note: This ignores Daylight Savings (PDT is UTC-7).
+            // For robustness, a fixed offset of 8 is a reasonable default for KOZT.
+            const offsetHours = 8; 
+            
+            // Create a UTC date object representing that time in UTC
+            // Date.UTC(y, m, d, h, m)
+            const utcTimestamp = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), hours + offsetHours, minutes);
+            const localDate = new Date(utcTimestamp);
+
+            // Convert to Local String
+            return localDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
 
         function updateUI(title, artist, imageUrl, album, time) {
             console.log("Updating UI -> Title:", title, "Artist:", artist, "Album:", album, "Time:", time);
@@ -152,7 +195,9 @@
             titleEl.textContent = title || "";
             artistEl.textContent = artist || "";
             albumEl.textContent = album || "";
-            timeEl.textContent = time || "";
+            
+            // Convert time if present
+            timeEl.textContent = convertStationTimeToLocal(time) || "";
 
             if (imageUrl) {
                 artEl.style.backgroundImage = `url('${imageUrl}')`;
@@ -308,8 +353,10 @@
         console.log("Receiver Context Started");
 
         // Keep-alive heartbeat (every 30s) to prevent Ambient Mode
-        // Reloads a 1x1 pixel image to simulate activity.
+        // We use a background network request instead of interrupting the main player.
         setInterval(() => {
+            fetch('https://www.google.com/favicon.ico?t=' + Date.now(), { mode: 'no-cors' }).catch(() => {});
+            // Also refresh image just in case
             const img = document.getElementById('keepAlive');
             if (img) {
                 img.src = 'https://www.google.com/favicon.ico?t=' + Date.now();
