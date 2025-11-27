@@ -122,9 +122,12 @@
         /* Hidden media player - Required for CAF state */
         cast-media-player#keepAlivePlayer {
             position: absolute !important;
-            width: 1px !important;
-            height: 1px !important;
-            visibility: hidden !important;
+            left: -10000px !important;
+            top: -10000px !important;
+            width: 0px !important;
+            height: 0px !important;
+            overflow: hidden !important;
+            opacity: 0 !important;
             pointer-events: none !important;
             z-index: -10 !important;
         }
@@ -132,10 +135,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.8 -->
+    <!-- Receiver Version: v5.9 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.8</div>
+    <div id="version-tag">v5.9</div>
     <div id="album-art"></div>
     <div id="song-title">Loading...</div>
     <div id="artist-name"></div>

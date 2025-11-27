@@ -1,4 +1,4 @@
-# Session Summary: Chromecast Radio Receiver (v5.8)
+# Session Summary: Chromecast Radio Receiver (v5.9)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
@@ -12,10 +12,10 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
         - **Ping/Pong Keepalive:** Sends `PING` every 10s. Waits for `PONG`. If timeout/failure 3 times, assumes disconnect.
         - **Background Detection:** Checks `visibilityState` in `PONG` response. If `hidden`, attempts to re-foreground the app using `launch_app(app_id)` without stopping playback.
         - **Graceful Exit:** Handles `DISCONNECT` message from receiver (on `beforeunload`) to trigger immediate restart.
-- **Receiver (`index.html` / `receiver.html` - v5.8):** 
+- **Receiver (`index.html` / `receiver.html` - v5.9):** 
     - **WORKING:** Displays custom UI correctly and stays awake.
     - **Key Architecture:**
-        - **Hidden `cast-media-player`:** Restored the `<cast-media-player>` element (hidden) to ensure CAF state binding prevents Ambient Mode.
+        - **Off-Screen `cast-media-player`:** The player element is positioned at `-10000px` top/left to force CAF state binding while ensuring it is invisible, preventing the default UI from appearing.
     - **Features:**
         - **Time Zone Conversion:** Converts station time (Pacific) to local device time for track start display.
         - **Ambient Mode Prevention:** Implemented `maxInactivity=3600` and a 30s heartbeat that reloads a hidden 1x1 pixel image.
