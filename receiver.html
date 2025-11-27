@@ -118,29 +118,19 @@
             position: relative;
             z-index: 10;
         }
-        /* Hidden media player for keep-alive */
-        cast-media-player#keepAlivePlayer {
-            position: absolute !important;
-            width: 1px !important;
-            height: 1px !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            z-index: -10 !important;
-        }
     </style>
 </head>
 
 <body>
-    <!-- Receiver Version: v5.4 -->
+    <!-- Receiver Version: v5.5 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.4</div>
+    <div id="version-tag">v5.5</div>
     <div id="album-art"></div>
     <div id="song-title">Loading...</div>
     <div id="artist-name"></div>
     <div id="album-name"></div>
     <div id="track-time"></div>
-    <cast-media-player id="keepAlivePlayer"></cast-media-player>
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();

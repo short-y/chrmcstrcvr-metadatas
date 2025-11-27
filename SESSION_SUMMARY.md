@@ -1,4 +1,4 @@
-# Session Summary: Chromecast Radio Receiver (v5.4)
+# Session Summary: Chromecast Radio Receiver (v5.5)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
@@ -12,13 +12,11 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
         - **Ping/Pong Keepalive:** Sends `PING` every 10s. Waits for `PONG`. If timeout/failure 3 times, assumes disconnect.
         - **Background Detection:** Checks `visibilityState` in `PONG` response. If `hidden`, attempts to re-foreground the app using `launch_app(app_id)` without stopping playback.
         - **Graceful Exit:** Handles `DISCONNECT` message from receiver (on `beforeunload`) to trigger immediate restart.
-- **Receiver (`index.html` / `receiver.html` - v5.4):** 
+- **Receiver (`index.html` / `receiver.html` - v5.5):** 
     - **WORKING:** Displays custom UI correctly and stays awake.
     - **Key Architecture:**
-        - **Invisible `cast-media-player`:** We restored the standard `<cast-media-player>` element but made it invisible using `opacity: 0; z-index: -10; pointer-events: none;`. Now with `id="keepAlivePlayer"`.
-        - **Why:** This is CRITICAL. It ensures the Cast Application Framework (CAF) correctly binds the media session state (`PLAYING`/`BUFFERING`). This state is required to prevent the Nest Hub from aggressively triggering Ambient Mode (screensaver).
-    - **Features:**
-        - **Ambient Mode Prevention:** Implemented `maxInactivity=3600` and a 30s background image fetch heartbeat to further prevent Nest Hub from entering Ambient Mode.**
+        - **Removed `cast-media-player`:** We have removed the `<cast-media-player>` element entirely to force the display of our custom UI.
+        - **Ambient Mode Prevention:** We rely on `disableIdleTimeout`, `maxInactivity=3600`, and a 30s background image fetch heartbeat to prevent Ambient Mode.
         - **Ping/Pong:** Responds to `PING` with `PONG`, including `visibilityState` and `standbyState`.
         - **Exit Signal:** Sends `DISCONNECT` message to sender on `window.beforeunload`.
         - **Metadata:** Updates Title, Artist, Album, Time, and Art via Custom Messages or Native Media Status.
