@@ -356,6 +356,10 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         print("Playback started!")
     else:
         print("Mode: No-Stream. Skipping playback request. Displaying metadata only.")
+        if not app_id:
+            print("WARNING: --no-stream (or -ns) used without --app_id. The Default Media Receiver will not launch, and custom metadata will not be displayed.")
+            # We explicitly don't exit here to allow sending custom messages
+            # if the user just wants to see logs or an app is launched manually.
     
     # Send immediate update with REAL metadata to populate Custom UI
     time.sleep(1) # Wait for receiver to be ready
@@ -524,7 +528,7 @@ if __name__ == "__main__":
     parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument("--kozt", action="store_true", help="Force KOZT metadata scraping, even if URL doesn't contain 'kozt'")
-    parser.add_argument("--no-stream", action="store_true", help="Launch app and update metadata, but do not play audio stream")
+    parser.add_argument("-ns", "--no-stream", action="store_true", help="Launch app and update metadata, but do not play audio stream")
     
     args = parser.parse_args()
     
