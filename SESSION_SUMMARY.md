@@ -1,4 +1,4 @@
-# Session Summary: Chromecast Radio Receiver (v5.9)
+# Session Summary: Chromecast Radio Receiver (v5.10)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
@@ -12,13 +12,13 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
         - **Ping/Pong Keepalive:** Sends `PING` every 10s. Waits for `PONG`. If timeout/failure 3 times, assumes disconnect.
         - **Background Detection:** Checks `visibilityState` in `PONG` response. If `hidden`, attempts to re-foreground the app using `launch_app(app_id)` without stopping playback.
         - **Graceful Exit:** Handles `DISCONNECT` message from receiver (on `beforeunload`) to trigger immediate restart.
-- **Receiver (`index.html` / `receiver.html` - v5.9):** 
+- **Receiver (`index.html` / `receiver.html` - v5.10):** 
     - **WORKING:** Displays custom UI correctly and stays awake.
     - **Key Architecture:**
-        - **Off-Screen `cast-media-player`:** The player element is positioned at `-10000px` top/left to force CAF state binding while ensuring it is invisible, preventing the default UI from appearing.
+        - **Covering `cast-media-player`:** A `#custom-ui` container with `z-index: 20000` and solid background covers the default CAF player, which is kept active (but invisible underneath) to maintain the session state.
     - **Features:**
-        - **Time Zone Conversion:** Converts station time (Pacific) to local device time for track start display.
-        - **Ambient Mode Prevention:** Implemented `maxInactivity=3600` and a 30s heartbeat that reloads a hidden 1x1 pixel image.
+        - **Time Zone Conversion:** Converts station time (Pacific) to local device time.
+        - **Ambient Mode Prevention:** Implemented `maxInactivity=3600`, hidden player, and 30s heartbeat.
 
 **History of "Ambient Mode" Fixes:**
 1.  `disableIdleTimeout: true` in JS: Necessary but insufficient on its own for Nest Hubs.

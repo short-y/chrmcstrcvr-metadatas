@@ -32,6 +32,21 @@
             overflow: hidden;
         }
 
+        /* Container to cover the default CAF player */
+        #custom-ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #121212;
+            z-index: 20000; /* Ensure it sits on top of everything */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
         #bg-image {
             position: absolute;
             top: 0;
@@ -51,6 +66,17 @@
             right: 10px;
             color: #aaa;
             font-size: 12px;
+            z-index: 10000;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        #local-clock {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #ddd;
+            font-size: 2.5vh;
+            font-weight: bold;
             z-index: 10000;
             text-shadow: 1px 1px 2px black;
         }
@@ -135,19 +161,22 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.9 -->
+    <!-- Receiver Version: v5.10 -->
 
-    <div id="bg-image"></div>
-    <div id="version-tag">v5.9</div>
-    <div id="album-art"></div>
-    <div id="song-title">Loading...</div>
-    <div id="artist-name"></div>
-    <div id="album-name"></div>
-    <div id="track-time"></div>
-    <!-- Keep-alive image -->
-    <img id="keepAlive" style="position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;" />
+    <div id="custom-ui">
+        <div id="bg-image"></div>
+        <div id="version-tag">v5.10</div>
+        <div id="local-clock">--:--</div>
+        <div id="album-art"></div>
+        <div id="song-title">Loading...</div>
+        <div id="artist-name"></div>
+        <div id="album-name"></div>
+        <div id="track-time"></div>
+        <!-- Keep-alive image -->
+        <img id="keepAlive" style="position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;" />
+    </div>
     
-    <!-- Restore Player for CAF Keep-Alive -->
+    <!-- Restore Player for CAF Keep-Alive (Outside Custom UI) -->
     <cast-media-player id="keepAlivePlayer"></cast-media-player>
 
     <script>
@@ -355,6 +384,16 @@
         options.touchScreenOptimizedApp = true;
         context.start(options);
         console.log("Receiver Context Started");
+
+        // Local Clock
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const clockEl = document.getElementById('local-clock');
+            if (clockEl) clockEl.textContent = timeString;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
 
         // Keep-alive heartbeat (every 30s) to prevent Ambient Mode
         // We use a background network request instead of interrupting the main player.
