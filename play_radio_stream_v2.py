@@ -12,7 +12,7 @@ from urllib.parse import quote
 
 # Default Stream (Radio Paradise Main Mix)
 DEFAULT_STREAM_URL = "http://stream.radioparadise.com/aac-128"
-DEFAULT_STREAM_TYPE = "audio/mp4" # or audio/mpeg
+DEFAULT_STREAM_TYPE = "video/mp4" # Trick: Use video type to avoid persistent Audio UI
 DEFAULT_IMAGE_URL = "https://radioparadise.com/graphics/logo_flat_shadow.png"
 DEFAULT_TITLE = "Radio Paradise"
 DEFAULT_SUBTITLE = "Internet Radio"

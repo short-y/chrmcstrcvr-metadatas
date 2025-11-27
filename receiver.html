@@ -172,11 +172,11 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.11 -->
+    <!-- Receiver Version: v5.12 -->
 
     <div id="custom-ui">
         <div id="bg-image"></div>
-        <div id="version-tag">v5.11</div>
+        <div id="version-tag">v5.12</div>
         <div id="local-clock">--:--</div>
         <div id="album-art"></div>
         <div id="song-title">Loading...</div>
@@ -417,16 +417,6 @@
         options.touchScreenOptimizedApp = true;
         context.start(options);
         console.log("Receiver Context Started");
-
-        // Local Clock
-        function updateClock() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const clockEl = document.getElementById('local-clock');
-            if (clockEl) clockEl.textContent = timeString;
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
 
         // Keep-alive heartbeat (every 30s) to prevent Ambient Mode
         // We use a background network request instead of interrupting the main player.

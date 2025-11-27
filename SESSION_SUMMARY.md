@@ -1,18 +1,13 @@
-# Session Summary: Chromecast Radio Receiver (v5.11)
+# Session Summary: Chromecast Radio Receiver (v5.12)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
 
 **Current Status:**
-- **Sender (`play_radio_stream_v2.py` - v2.4):** 
-    - **WORKING:** Fully functional and robust (Fixed `play_media` argument).
-    - **Features:**
-        - **KOZT-Specific Metadata:** Fetches title, artist, album, time, and `largeimage` (album art) directly from Amperwave JSON API, and includes album and time in the initial media load.
-        - **Generic Stream Metadata:** Uses Icecast interleaved metadata for non-KOZT streams.
-        - **Ping/Pong Keepalive:** Sends `PING` every 10s. Waits for `PONG`. If timeout/failure 3 times, assumes disconnect.
-        - **Background Detection:** Checks `visibilityState` in `PONG` response. If `hidden`, attempts to re-foreground the app using `launch_app(app_id)` without stopping playback.
-        - **Graceful Exit:** Handles `DISCONNECT` message from receiver (on `beforeunload`) to trigger immediate restart.
-- **Receiver (`index.html` / `receiver.html` - v5.11):** 
+- **Sender (`play_radio_stream_v2.py` - v2.5):** 
+    - **WORKING:** Fully functional and robust.
+    - **Updates:** Changed `DEFAULT_STREAM_TYPE` to `video/mp4` to trick CAF into video mode, potentially minimizing persistent audio UI.
+- **Receiver (`index.html` / `receiver.html` - v5.12):** 
     - **WORKING:** Displays custom UI correctly and stays awake.
     - **Key Architecture:**
         - **Hidden `cast-media-player`:** Uses CSS Variables (`--logo-image: none`, etc.) and Shadow DOM Style Injection to make the default player invisible, while keeping it active off-screen.
