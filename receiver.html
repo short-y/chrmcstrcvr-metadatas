@@ -120,20 +120,21 @@
         }
         /* Hidden media player for keep-alive */
         cast-media-player#keepAlivePlayer {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: -10 !important;
         }
     </style>
 </head>
 
 <body>
-    <!-- Receiver Version: v5.3 -->
+    <!-- Receiver Version: v5.4 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.3</div>
+    <div id="version-tag">v5.4</div>
     <div id="album-art"></div>
     <div id="song-title">Loading...</div>
     <div id="artist-name"></div>
