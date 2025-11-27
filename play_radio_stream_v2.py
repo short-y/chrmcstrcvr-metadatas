@@ -351,7 +351,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         # But explicitly setting it helps if we want to switch apps
         # cast.start_app("CC1AD845") # Default Media Receiver ID
 
-    mc.play_media(stream_url, stream_type, stream_type="LIVE", title=initial_title, thumb=initial_image_url, album_name=initial_album, metadata=metadata)
+    mc.play_media(stream_url, stream_type, stream_type="LIVE", title=initial_title, thumb=initial_image_url, metadata=metadata)
     mc.block_until_active()
     print("Playback started!")
     

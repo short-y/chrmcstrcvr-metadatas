@@ -5,7 +5,7 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
 
 **Current Status:**
 - **Sender (`play_radio_stream_v2.py` - v2.4):** 
-    - **WORKING:** Fully functional and robust.
+    - **WORKING:** Fully functional and robust (Fixed `play_media` argument).
     - **Features:**
         - **KOZT-Specific Metadata:** Fetches title, artist, album, time, and `largeimage` (album art) directly from Amperwave JSON API, and includes album and time in the initial media load.
         - **Generic Stream Metadata:** Uses Icecast interleaved metadata for non-KOZT streams.
