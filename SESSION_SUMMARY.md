@@ -7,8 +7,10 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
 - **Web App (`webapp.html` - v1.0):**
     - **NEW:** Standalone "Now Playing" display for browsers.
     - **Features:** Polls KOZT API for metadata (Title, Artist, Album, Time, Art), applies local time conversion, and displays a live clock. No audio playback.
-- **Sender (`play_radio_stream_v2.py` - v2.6):** 
+- **Sender (`play_radio_stream_v2.py` - v2.7):** 
     - **WORKING:** Fully functional and robust.
+    - **Features:**
+        - **No-Stream Mode:** Added `--no-stream` flag to launch the receiver and display metadata without playing audio (useful for monitoring).
     - **Updates:** Now sends empty metadata in the initial `play_media` call to suppress the Default UI's persistent album art. Real metadata is sent immediately after via a custom message.
 - **Receiver (`index.html` / `receiver.html` - v5.15):** 
     - **WORKING:** Displays custom UI correctly and stays awake.

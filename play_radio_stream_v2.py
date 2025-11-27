@@ -270,7 +270,7 @@ def scrape_kozt_now_playing():
         logging.debug(f"Error fetching KOZT now playing JSON: {e}")
         return None, None, None, None, None
 
-def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None, is_kozt_station=False):
+def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None, is_kozt_station=False, no_stream=False):
     print(f"Searching for Chromecast: {device_name}...")
     chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=[device_name])
     
@@ -317,8 +317,6 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         else:
             print("Warning: Failed to get initial KOZT metadata. Using provided defaults.")
 
-    print(f"Playing {initial_title} ({stream_url})...")
-    
     # Prepare minimal metadata to suppress Default UI
     metadata = {
         "metadataType": 0, # Generic
@@ -350,10 +348,14 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         # But explicitly setting it helps if we want to switch apps
         # cast.start_app("CC1AD845") # Default Media Receiver ID
 
-    # Use generic title/thumb to avoid Default UI clutter
-    mc.play_media(stream_url, stream_type, stream_type="LIVE", title=" ", thumb=None, metadata=metadata)
-    mc.block_until_active()
-    print("Playback started!")
+    if not no_stream:
+        print(f"Playing {initial_title} ({stream_url})...")
+        # Use generic title/thumb to avoid Default UI clutter
+        mc.play_media(stream_url, stream_type, stream_type="LIVE", title=" ", thumb=None, metadata=metadata)
+        mc.block_until_active()
+        print("Playback started!")
+    else:
+        print("Mode: No-Stream. Skipping playback request. Displaying metadata only.")
     
     # Send immediate update with REAL metadata to populate Custom UI
     time.sleep(1) # Wait for receiver to be ready
@@ -522,6 +524,7 @@ if __name__ == "__main__":
     parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument("--kozt", action="store_true", help="Force KOZT metadata scraping, even if URL doesn't contain 'kozt'")
+    parser.add_argument("--no-stream", action="store_true", help="Launch app and update metadata, but do not play audio stream")
     
     args = parser.parse_args()
     
@@ -536,7 +539,7 @@ if __name__ == "__main__":
     try:
         while True:
             try:
-                play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt)
+                play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt, args.no_stream)
             except Exception as e:
                 logging.error(f"Connection lost or error occurred: {e}")
                 logging.info("Attempting to reconnect in 5 seconds...")
