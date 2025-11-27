@@ -1,4 +1,4 @@
-# Session Summary: Chromecast Radio Receiver (v5.1 - Robust)
+# Session Summary: Chromecast Radio Receiver (v5.2)
 
 **Current Goal:**
 We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a Python Sender script to play internet radio streams on a Google Nest Hub, displaying "Now Playing" metadata (Song Title/Artist/Album/Time) and album art that updates in real-time.
@@ -12,7 +12,7 @@ We are building a custom Chromecast Receiver App (hosted on GitHub Pages) and a 
         - **Ping/Pong Keepalive:** Sends `PING` every 10s. Waits for `PONG`. If timeout/failure 3 times, assumes disconnect.
         - **Background Detection:** Checks `visibilityState` in `PONG` response. If `hidden`, attempts to re-foreground the app using `launch_app(app_id)` without stopping playback.
         - **Graceful Exit:** Handles `DISCONNECT` message from receiver (on `beforeunload`) to trigger immediate restart.
-- **Receiver (`index.html` / `receiver.html` - v5.0):** 
+- **Receiver (`index.html` / `receiver.html` - v5.2):** 
     - **WORKING:** Displays custom UI correctly and stays awake.
     - **Key Architecture:**
         - **Invisible `cast-media-player`:** We restored the standard `<cast-media-player>` element but made it invisible using `opacity: 0; z-index: -10; pointer-events: none;`. Now with `id="keepAlivePlayer"`.
