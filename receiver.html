@@ -93,9 +93,6 @@
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
             border-radius: 8px;
             transition: background-image 0.5s ease-in-out;
-            background-image: url('https://www.gstatic.com/images/branding/product/2x/chromecast_64dp.png');
-            background-repeat: no-repeat;
-            background-size: 50%;
             position: relative;
             z-index: 10;
         }
@@ -172,11 +169,11 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.13 -->
+    <!-- Receiver Version: v5.14 -->
 
     <div id="custom-ui">
         <div id="bg-image"></div>
-        <div id="version-tag">v5.13</div>
+        <div id="version-tag">v5.14</div>
         <div id="local-clock">--:--</div>
         <div id="album-art"></div>
         <div id="song-title">Loading...</div>
@@ -244,11 +241,17 @@
 
             const now = new Date();
             // Assume Station Time is Pacific (UTC-8 approx).
+            // To get UTC, we ADD 8 hours to the Pacific Time.
+            // Note: This ignores Daylight Savings (PDT is UTC-7).
+            // For robustness, a fixed offset of 8 is a reasonable default for KOZT.
             const offsetHours = 8; 
             
+            // Create a UTC date object representing that time in UTC
+            // Date.UTC(y, m, d, h, m)
             const utcTimestamp = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), hours + offsetHours, minutes);
             const localDate = new Date(utcTimestamp);
 
+            // Convert to Local String
             return localDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         }
 
