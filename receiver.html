@@ -122,15 +122,17 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.5 -->
+    <!-- Receiver Version: v5.7 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.5</div>
+    <div id="version-tag">v5.7</div>
     <div id="album-art"></div>
     <div id="song-title">Loading...</div>
     <div id="artist-name"></div>
     <div id="album-name"></div>
     <div id="track-time"></div>
+    <!-- Keep-alive image -->
+    <img id="keepAlive" style="position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none;" />
     <script>
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
@@ -139,7 +141,7 @@
         let pollInterval = null;
 
         function updateUI(title, artist, imageUrl, album, time) {
-            console.log("Updating UI -> Title:", title, "Artist:", artist);
+            console.log("Updating UI -> Title:", title, "Artist:", artist, "Album:", album, "Time:", time);
             const titleEl = document.getElementById('song-title');
             const artistEl = document.getElementById('artist-name');
             const albumEl = document.getElementById('album-name');
@@ -147,10 +149,10 @@
             const artEl = document.getElementById('album-art');
             const bgEl = document.getElementById('bg-image');
 
-            if (title && title !== "") titleEl.textContent = title;
-            if (artist && artist !== "") artistEl.textContent = artist;
-            if (album) albumEl.textContent = album;
-            if (time) timeEl.textContent = time;
+            titleEl.textContent = title || "";
+            artistEl.textContent = artist || "";
+            albumEl.textContent = album || "";
+            timeEl.textContent = time || "";
 
             if (imageUrl) {
                 artEl.style.backgroundImage = `url('${imageUrl}')`;
@@ -306,9 +308,12 @@
         console.log("Receiver Context Started");
 
         // Keep-alive heartbeat (every 30s) to prevent Ambient Mode
-        // We use a background network request instead of interrupting the main player.
+        // Reloads a 1x1 pixel image to simulate activity.
         setInterval(() => {
-            fetch('https://www.google.com/favicon.ico?t=' + Date.now(), { mode: 'no-cors' }).catch(() => {});
+            const img = document.getElementById('keepAlive');
+            if (img) {
+                img.src = 'https://www.google.com/favicon.ico?t=' + Date.now();
+            }
         }, 30000);
 
         // Handle Unload / Close
