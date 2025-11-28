@@ -522,7 +522,7 @@
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = true;
         options.maxInactivity = 3600; // Allow long inactivity
-        options.touchScreenOptimizedApp = true;
+        options.touchScreenOptimizedApp = false;
         context.start(options);
         console.log("Receiver Context Started");
 

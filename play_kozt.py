@@ -363,16 +363,38 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     # Launch Default Media Receiver and play
     if app_id:
         print(f"Launching Custom App ID: {app_id}")
+        
+        # Ensure any previous session is closed (helps with Pixel Tablet / Hubs)
         try:
-            cast.start_app(app_id) # Custom Receiver
-            time.sleep(2) # Wait for app to load
-        except pychromecast.error.RequestFailed:
-            print(f"Error: Failed to launch App ID {app_id}.")
+            logging.debug("Ensuring previous app is closed...")
+            cast.quit_app()
+            time.sleep(3) 
+        except Exception as e:
+            logging.debug(f"Non-fatal error quitting app: {e}")
+
+        # Try to launch with a retry
+        launch_success = False
+        for attempt in range(2):
+            try:
+                print(f"Starting app {app_id} (Attempt {attempt + 1})...")
+                cast.start_app(app_id) # Custom Receiver
+                launch_success = True
+                time.sleep(3) # Wait for app to load
+                break
+            except Exception as e:
+                print(f"Error launching app (Attempt {attempt + 1}): {e}")
+                if attempt < 1:
+                    print("Retrying in 5 seconds...")
+                    time.sleep(5)
+        
+        if not launch_success:
+            print(f"Error: Failed to launch App ID {app_id} after retries.")
             print("Possible causes:")
             print("1. The App ID is incorrect.")
             print("2. The Chromecast device is not registered for development (if the App is unpublished).")
             print("3. The Chromecast has not been rebooted since registering the device serial number.")
             print("4. The App ID was created very recently and hasn't propagated to the device yet.")
+            print("5. The device (e.g., Pixel Tablet) prevented the launch due to idle/dock state.")
             sys.exit(1)
     else:
         print("Launching Default Media Receiver")
