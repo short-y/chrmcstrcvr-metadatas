@@ -32,21 +32,6 @@
             overflow: hidden;
         }
 
-        /* Container to cover the default CAF player */
-        #custom-ui {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: #121212;
-            z-index: 20000; /* Ensure it sits on top of everything */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
         #bg-image {
             position: absolute;
             top: 0;
@@ -66,17 +51,6 @@
             right: 10px;
             color: #aaa;
             font-size: 12px;
-            z-index: 10000;
-            text-shadow: 1px 1px 2px black;
-        }
-
-        #local-clock {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: #ddd;
-            font-size: 2.5vh;
-            font-weight: bold;
             z-index: 10000;
             text-shadow: 1px 1px 2px black;
         }
@@ -142,6 +116,18 @@
             z-index: 10;
         }
 
+        #station-name {
+            font-size: 3.5vw; /* Slightly larger than artist/album */
+            color: #eee;
+            margin-bottom: 2vh; /* Space below station name */
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
         /* Hidden media player - Required for CAF state */
         cast-media-player#keepAlivePlayer {
             position: absolute !important;
@@ -169,12 +155,12 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.15 -->
+    <!-- Receiver Version: v5.17 -->
 
-    <div id="custom-ui">
-        <div id="bg-image"></div>
-        <div id="version-tag">v5.15</div>
+    <div id="bg-image"></div>
+    <div id="version-tag">v5.17</div>
         <div id="local-clock">--:--</div>
+        <div id="station-name"></div>
         <div id="album-art"></div>
         <div id="song-title">Loading...</div>
         <div id="artist-name"></div>
@@ -241,32 +227,28 @@
 
             const now = new Date();
             // Assume Station Time is Pacific (UTC-8 approx).
-            // To get UTC, we ADD 8 hours to the Pacific Time.
-            // Note: This ignores Daylight Savings (PDT is UTC-7).
-            // For robustness, a fixed offset of 8 is a reasonable default for KOZT.
             const offsetHours = 8; 
             
-            // Create a UTC date object representing that time in UTC
-            // Date.UTC(y, m, d, h, m)
             const utcTimestamp = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), hours + offsetHours, minutes);
             const localDate = new Date(utcTimestamp);
 
-            // Convert to Local String
             return localDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         }
 
-        function updateUI(title, artist, imageUrl, album, time) {
-            console.log("Updating UI -> Title:", title, "Artist:", artist, "Album:", album, "Time:", time);
+        function updateUI(title, artist, imageUrl, album, time, stationName) {
+            console.log("Updating UI -> Title:", title, "Artist:", artist, "Album:", album, "Time:", time, "Station:", stationName);
             const titleEl = document.getElementById('song-title');
             const artistEl = document.getElementById('artist-name');
             const albumEl = document.getElementById('album-name');
             const timeEl = document.getElementById('track-time');
             const artEl = document.getElementById('album-art');
             const bgEl = document.getElementById('bg-image');
+            const stationEl = document.getElementById('station-name');
 
             titleEl.textContent = title || "";
             artistEl.textContent = artist || "";
             albumEl.textContent = album || "";
+            stationEl.textContent = stationName || "";
             
             // Convert time if present
             timeEl.textContent = convertStationTimeToLocal(time) || "";
@@ -276,7 +258,6 @@
                 artEl.style.backgroundSize = 'cover';
                 bgEl.style.backgroundImage = `url('${imageUrl}')`;
             } else {
-                // Clear images if none provided to avoid stale art
                 artEl.style.backgroundImage = 'none';
                 bgEl.style.backgroundImage = 'none';
             }
@@ -417,7 +398,7 @@
                     });
                     return;
                 }
-                updateUI(data.title, data.artist, data.image, data.album, data.time);
+                updateUI(data.title, data.artist, data.image, data.album, data.time, data.stationName);
             }
         });
 
@@ -429,15 +410,14 @@
         console.log("Receiver Context Started");
 
         // Keep-alive heartbeat (every 30s) to prevent Ambient Mode
-        // We use a background network request instead of interrupting the main player.
+        // Reloads a 1x1 pixel image to simulate activity.
         setInterval(() => {
-            fetch('https://www.google.com/favicon.ico?t=' + Date.now(), { mode: 'no-cors' }).catch(() => {});
-            // Also refresh image just in case
             const img = document.getElementById('keepAlive');
             if (img) {
                 img.src = 'https://www.google.com/favicon.ico?t=' + Date.now();
             }
         }, 30000);
+
 
         // Handle Unload / Close
         window.addEventListener('beforeunload', () => {

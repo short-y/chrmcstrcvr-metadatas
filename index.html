@@ -233,6 +233,18 @@
             z-index: 10;
         }
 
+        #station-name {
+            font-size: 3.5vw; /* Slightly larger than artist/album */
+            color: #eee;
+            margin-bottom: 2vh; /* Space below station name */
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
         /* Hidden media player - Required for CAF state */
         cast-media-player#keepAlivePlayer {
             position: absolute !important;
@@ -260,11 +272,12 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.15 -->
+    <!-- Receiver Version: v5.17 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.15</div>
+    <div id="version-tag">v5.17</div>
         <div id="local-clock">--:--</div>
+        <div id="station-name"></div>
         <div id="album-art"></div>
         <div id="song-title">Loading...</div>
         <div id="artist-name"></div>
@@ -339,18 +352,20 @@
             return localDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         }
 
-        function updateUI(title, artist, imageUrl, album, time) {
-            console.log("Updating UI -> Title:", title, "Artist:", artist, "Album:", album, "Time:", time);
+        function updateUI(title, artist, imageUrl, album, time, stationName) {
+            console.log("Updating UI -> Title:", title, "Artist:", artist, "Album:", album, "Time:", time, "Station:", stationName);
             const titleEl = document.getElementById('song-title');
             const artistEl = document.getElementById('artist-name');
             const albumEl = document.getElementById('album-name');
             const timeEl = document.getElementById('track-time');
             const artEl = document.getElementById('album-art');
             const bgEl = document.getElementById('bg-image');
+            const stationEl = document.getElementById('station-name');
 
             titleEl.textContent = title || "";
             artistEl.textContent = artist || "";
             albumEl.textContent = album || "";
+            stationEl.textContent = stationName || "";
             
             // Convert time if present
             timeEl.textContent = convertStationTimeToLocal(time) || "";
@@ -500,7 +515,7 @@
                     });
                     return;
                 }
-                updateUI(data.title, data.artist, data.image, data.album, data.time);
+                updateUI(data.title, data.artist, data.image, data.album, data.time, data.stationName);
             }
         });
 
