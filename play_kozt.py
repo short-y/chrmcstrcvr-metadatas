@@ -6,6 +6,8 @@ import logging
 import requests
 import pychromecast
 from pychromecast.controllers import BaseController
+from pychromecast.discovery import CastBrowser, SimpleCastListener
+import zeroconf
 import threading
 import struct
 import json
@@ -20,6 +22,32 @@ DEFAULT_SUBTITLE = "Mendocino County Public Broadcasting"
 DEFAULT_APP_ID = "6509B35C"
 
 NAMESPACE = 'urn:x-cast:com.example.radio'
+
+def discover_all_chromecasts(timeout=5):
+    """
+    Discover all chromecasts on the network using CastBrowser directly,
+    avoiding the deprecated discover_chromecasts function.
+    """
+    found_chromecasts = []
+    zconf = zeroconf.Zeroconf()
+    
+    # SimpleCastListener expects a callback for add (and optionally remove/update)
+    # We just need to start discovery and let the browser populate browser.devices
+    listener = SimpleCastListener(lambda uuid, service: None)
+    browser = CastBrowser(listener, zconf)
+    browser.start_discovery()
+    
+    print(f"Scanning for devices ({timeout}s)...")
+    time.sleep(timeout)
+    
+    for uuid, service in browser.devices.items():
+        try:
+             cc = pychromecast.get_chromecast_from_cast_info(service, zconf)
+             found_chromecasts.append(cc)
+        except Exception as e:
+             logging.debug(f"Error creating Chromecast object for {uuid}: {e}")
+             
+    return found_chromecasts, browser
 
 class RadioController(BaseController):
     """
@@ -280,7 +308,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     if not chromecasts:
         # Try discovering all if specific one not found immediately
         print(f"Device '{device_name}' not found immediately. Scanning all devices...")
-        chromecasts, browser = pychromecast.get_chromecasts()
+        chromecasts, browser = discover_all_chromecasts()
         # Filter manually
         chromecasts = [cc for cc in chromecasts if cc.name == device_name]
 
