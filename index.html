@@ -7,7 +7,7 @@
   - Supports manual metadata updates via custom Cast messages.
   - Attempts to poll common Icecast status endpoints for metadata.
   - Attempts to read embedded ID3 tags using jsmediatags.
-  - [New] On-screen Debug Log (Robust).
+  - [New] On-screen Debug Log.
 
 -->
 <!DOCTYPE html>
@@ -248,12 +248,12 @@
         /* Hidden media player - Required for CAF state */
         cast-media-player#keepAlivePlayer {
             position: absolute !important;
-            left: -10000px !important;
-            top: -10000px !important;
-            width: 0px !important;
-            height: 0px !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 1px !important;
+            height: 1px !important;
             overflow: hidden !important;
-            opacity: 0 !important;
+            opacity: 0.001 !important;
             pointer-events: none !important;
             z-index: -10 !important;
             
@@ -275,7 +275,7 @@
     <!-- Receiver Version: v5.17 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.17</div>
+    <div id="version-tag">v5.18</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
