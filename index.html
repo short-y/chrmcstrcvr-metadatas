@@ -275,10 +275,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.24 -->
+    <!-- Receiver Version: v5.25 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.24</div>
+    <div id="version-tag">v5.25</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
@@ -297,7 +297,7 @@
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
-        const RECEIVER_VERSION = 'v5.24';
+        const RECEIVER_VERSION = 'v5.25';
 
         // Attempt to hide Shadow DOM elements of the player
         function hidePlayerInternals() {
@@ -558,6 +558,30 @@
                 });
             }
         });
+
+        // Simulate user interaction to wake up UI / dismiss dimming
+        function simulateInteraction() {
+            console.log("Simulating interaction...");
+            try {
+                const event = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true
+                });
+                document.body.dispatchEvent(event);
+                
+                const touchEvent = new TouchEvent('touchstart', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true
+                });
+                document.body.dispatchEvent(touchEvent);
+            } catch (e) {
+                console.log("Interaction simulation failed:", e);
+            }
+        }
+        setTimeout(simulateInteraction, 3000);
+        setTimeout(simulateInteraction, 8000); // Try again a bit later
         </script>
 </body>
 
