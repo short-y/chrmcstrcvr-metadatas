@@ -21,11 +21,14 @@ Force the Google Pixel Tablet (in Hub Mode) to display the Custom Receiver UI in
     *   **Metadata:** Sends `metadataType: 1` (MOVIE).
     *   **Looping:** Sends `QUEUE_UPDATE` with `repeatMode="REPEAT_SINGLE"` to ensure indefinite playback.
     *   **Launch Logic:** `quit_app()` is commented out.
+    *   **Logging:** Added multi-level logging (`--debug` for info/heartbeats, `--verbose` for full debug).
 
 **Operational Guide:**
 1.  **Prerequisite:** Disable Screen Lock on the Pixel Tablet (Settings > Security > Screen lock > None).
 2.  **Start:** `python3 play_kozt.py "Your Tablet Name" -ns`
+    *   Use `--debug` to see heartbeats and metadata refresh intervals.
+    *   Use `--verbose` for deep debugging.
 3.  **Action:** The app will launch. **Tap the screen once** to dismiss the initial dimming/overlay.
-4.  **Result:** The Custom Receiver stays visible and bright, blocking the screensaver.
+4.  **Result:** The Custom Receiver should remain visible and bright, blocking the screensaver.
 
 **Current Version:** v5.26

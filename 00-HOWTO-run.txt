@@ -26,7 +26,7 @@ If you are developing, ensure your device serial number is registered in the [Go
 
 ## 3. Running the Sender Script (KOZT)
 
-The primary script is `play_kozt.py`. It supports **KOZT metadata scraping** and a special **No-Stream Mode** for smart displays.
+The primary script is `play_kozt.py`.
 
 ### Basic Usage (Play Audio)
 Plays the KOZT stream on the specified device.
@@ -40,6 +40,20 @@ Launches the receiver and updates metadata **without** playing the live radio st
 ```bash
 python3 play_kozt.py "Office Nest Hub" -ns
 ```
+
+### Debugging & Logging
+*   **Default:** Minimal output (Errors/Warnings only).
+    ```bash
+    python3 play_kozt.py "Device"
+    ```
+*   **Debug Mode:** Shows heartbeats and update intervals.
+    ```bash
+    python3 play_kozt.py "Device" --debug
+    ```
+*   **Verbose Mode:** Shows full internal logs (Cast communication).
+    ```bash
+    python3 play_kozt.py "Device" --verbose
+    ```
 
 ### Pixel Tablet (Hub Mode) Instructions
 The Pixel Tablet in Hub Mode has strict security and power-saving features that can block custom apps. Follow these steps:
