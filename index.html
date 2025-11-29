@@ -248,17 +248,15 @@
         /* Hidden media player - Required for CAF state */
         cast-media-player#keepAlivePlayer {
             position: absolute !important;
-            top: auto !important;
-            left: auto !important;
-            bottom: 0 !important;
-            right: 0 !important;
-            width: 10px !important;
-            height: 10px !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             overflow: hidden !important;
             visibility: visible !important;
-            opacity: 0.5 !important; /* Visible for testing */
+            opacity: 0.00001 !important; /* Practically invisible */
             pointer-events: none !important;
-            z-index: -10 !important;
+            z-index: -10 !important; /* Behind our UI */
             
             /* CAF Specific CSS Variables to Hide UI */
             --logo-image: none;
@@ -275,10 +273,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.22 -->
+    <!-- Receiver Version: v5.23 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.22</div>
+    <div id="version-tag">v5.23</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
@@ -297,7 +295,7 @@
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
-        const RECEIVER_VERSION = 'v5.22';
+        const RECEIVER_VERSION = 'v5.23';
 
         // Attempt to hide Shadow DOM elements of the player
         function hidePlayerInternals() {
