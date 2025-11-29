@@ -275,10 +275,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.25 -->
+    <!-- Receiver Version: v5.26 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.25</div>
+    <div id="version-tag">v5.26</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
@@ -297,7 +297,7 @@
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
-        const RECEIVER_VERSION = 'v5.25';
+        const RECEIVER_VERSION = 'v5.26';
 
         // Attempt to hide Shadow DOM elements of the player
         function hidePlayerInternals() {
@@ -563,25 +563,38 @@
         function simulateInteraction() {
             console.log("Simulating interaction...");
             try {
-                const event = new MouseEvent('click', {
+                const player = document.getElementById('keepAlivePlayer');
+                const target = player || document.body;
+
+                const clickEvent = new MouseEvent('click', {
                     view: window,
                     bubbles: true,
                     cancelable: true
                 });
-                document.body.dispatchEvent(event);
+                target.dispatchEvent(clickEvent);
                 
                 const touchEvent = new TouchEvent('touchstart', {
                     view: window,
                     bubbles: true,
                     cancelable: true
                 });
-                document.body.dispatchEvent(touchEvent);
+                target.dispatchEvent(touchEvent);
+
+                const moveEvent = new MouseEvent('mousemove', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: 100,
+                    clientY: 100
+                });
+                target.dispatchEvent(moveEvent);
+
             } catch (e) {
                 console.log("Interaction simulation failed:", e);
             }
         }
-        setTimeout(simulateInteraction, 3000);
-        setTimeout(simulateInteraction, 8000); // Try again a bit later
+        // Try periodically to keep it awake
+        setInterval(simulateInteraction, 5000);
         </script>
 </body>
 
