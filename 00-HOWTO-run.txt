@@ -1,10 +1,10 @@
-# How to Run Your Chromecast Internet Radio App
+# How to Run Your Chromecast Internet Radio App (KOZT & Generic)
 
-This guide will walk you through setting up and running your custom Chromecast internet radio receiver.
+This guide explains how to run the custom Chromecast internet radio receiver, specifically tailored for **KOZT - The Coast** but adaptable for other stations.
 
 ## 1. Setup Your Python Environment
 
-The Python sender script (`play_radio_stream.py`) requires a virtual environment with `pychromecast` and `zeroconf` installed. If you haven't already:
+The Python sender scripts (`play_kozt.py`, `play_radio_stream_v2.py`) require a virtual environment with dependencies.
 
 1.  **Create and activate a virtual environment:**
     ```bash
@@ -13,86 +13,54 @@ The Python sender script (`play_radio_stream.py`) requires a virtual environment
     ```
 2.  **Install dependencies:**
     ```bash
-    pip install pychromecast zeroconf
+    pip install pychromecast zeroconf requests
     ```
 
-## 2. Host Your Custom Receiver (`receiver.html`)
+## 2. Hosting & Registration
 
-Your `receiver.html` file needs to be accessible via HTTPS on the internet for your Chromecast to load it.
+Your receiver (`index.html`) is hosted on **GitHub Pages**:
+*   **URL:** `https://short-y.github.io/chrmcstrcvr-metadatas/index.html`
+*   **App ID:** `6509B35C` (Registered in Google Cast Console)
 
-### Option A: GitHub Pages (Recommended for Permanent Hosting)
+If you are developing, ensure your device serial number is registered in the [Google Cast SDK Developer Console](https://cast.google.com/publish).
 
-This is the easiest and free way to host your receiver long-term.
+## 3. Running the Sender Script (KOZT)
 
-1.  **Create a new public repository** on GitHub (e.g., `my-chromecast-receiver`).
-2.  **Upload** your `receiver.html` file to the root of this repository.
-3.  Go to your repository's **Settings** tab.
-4.  In the left sidebar, click on **Pages**.
-5.  Under "Source", select the **`main` branch** (or `master` if that's your default) and click **Save**.
-6.  GitHub will provide you with a URL (e.g., `https://yourusername.github.io/my-chromecast-receiver/receiver.html`). This is your **Hosted Receiver URL**.
+The primary script is `play_kozt.py`. It supports **KOZT metadata scraping** and a special **No-Stream Mode** for smart displays.
 
-### Option B: Local Python Server + Ngrok (For Local Development/Testing)
+### Basic Usage (Play Audio)
+Plays the KOZT stream on the specified device.
+```bash
+python3 play_kozt.py "Living Room TV"
+```
 
-This is useful if you want to test changes quickly without pushing to GitHub, but requires `ngrok` (which you might need to install separately). **Chromecast generally requires HTTPS.**
+### No-Stream Mode (For Smart Displays / Hubs)
+Launches the receiver and updates metadata **without** playing the live radio stream audio (useful if you listen via a separate radio but want the display).
+*   **Note:** This mode plays a *silent* loop to keep the screen active.
+```bash
+python3 play_kozt.py "Office Nest Hub" -ns
+```
 
-1.  **Find your local IP address:**
+### Pixel Tablet (Hub Mode) Instructions
+The Pixel Tablet in Hub Mode has strict security and power-saving features that can block custom apps. Follow these steps:
+
+1.  **Disable Screen Lock:** Go to *Settings > Security > Screen lock* and set it to **None**. (Required to bypass `USER_PENDING_AUTHORIZATION` on launch).
+2.  **Launch:** Run the script:
     ```bash
-    hostname -I
-    # Example output: 192.168.1.50 172.17.0.1
-    # Use the one that corresponds to your local network, e.g., 192.168.1.50
+    python3 play_kozt.py "Pixel Tablet" -ns
     ```
-2.  **Start a simple web server** in your project directory (where `receiver.html` is):
-    ```bash
-    python3 -m http.server 8000
-    ```
-3.  **Expose your local server to the internet using ngrok:**
-    ```bash
-    ngrok http 8000
-    ```
-    Ngrok will give you an HTTPS forwarding URL (e.g., `https://xxxx-xx-xxx-xx.ngrok-free.app`). This is your **Hosted Receiver URL**.
+3.  **Dismiss Overlay:** The app will launch, but the screen may appear **faint or dimmed** initially. **Tap the screen once** to dismiss the system's media control overlay and brighten the UI.
+4.  **Result:** The custom receiver should remain visible and prevent the screensaver/ambient mode.
 
-## 3. Register Your Application with Google Cast
+## 4. Troubleshooting
 
-You need to register your receiver with Google to get an **Application ID (App ID)**. This is a one-time $5 fee for developers.
+*   **"USER_PENDING_AUTHORIZATION":** The device is locked or requires permission. Unlock the device or disable the screen lock.
+*   **Screensaver appears:** The receiver went idle. Ensure you are using the latest version of `play_kozt.py` (which enables the silent loop) and the latest receiver (v5.26+).
+*   **Faint UI:** Tap the screen to dismiss the system overlay.
 
-1.  Go to the [Google Cast SDK Developer Console](https://cast.google.com/publish).
-2.  Sign in with your Google account.
-3.  Click **"Add New Application"**.
-4.  Select **"Custom Receiver"**.
-5.  Enter the **Hosted Receiver URL** you obtained in Step 2 (e.g., from GitHub Pages or Ngrok).
-6.  Follow the prompts to complete the registration.
-7.  Once registered, you will be given an **Application ID** (e.g., `A1B2C3D4`). **Copy this ID**.
+## 5. Generic Usage
 
-## 4. Register Your Chromecast Device for Development (Optional, but Recommended for Testing)
-
-To test your custom receiver before it's officially published, you need to register your specific Chromecast device.
-
-1.  In the [Google Cast SDK Developer Console](https://cast.google.com/publish), navigate to the **"Devices"** section.
-2.  Click **"Add New Device"**.
-3.  Enter your Chromecast's **Serial Number**. (You can find this on the back of the device or in the Google Home app settings).
-4.  **Reboot your Chromecast** after registering it. It may take up to 15 minutes for the registration to take effect.
-
-## 5. Run Your Python Sender Script
-
-Now you can use the `play_radio_stream.py` script to launch your custom receiver and play a radio stream.
-
-1.  **Activate your virtual environment** (if not already active):
-    ```bash
-    source venv/bin/activate
-    ```
-2.  **Find your Chromecast's friendly name** (e.g., "Living Room TV", "Bedroom Speaker").
-3.  **Run the script:**
-    ```bash
-    python3 play_radio_stream.py "Your Chromecast Name" \
-        --url "http://stream.radioparadise.com/aac-128" \
-        --app_id "YOUR_APPLICATION_ID_HERE" \
-        --title "Radio Paradise Main Mix" \
-        --image "https://radioparadise.com/graphics/logo_flat_shadow.png"
-    ```
-    *   Replace `"Your Chromecast Name"` with the actual name of your device.
-    *   Replace `"YOUR_APPLICATION_ID_HERE"` with the App ID you got from the Google Cast Console.
-    *   You can change `--url`, `--title`, and `--image` to point to any other stream and initial metadata.
-
-Your Chromecast should now launch your custom receiver, display the title and image, and play the radio stream!
-
-If the stream provides metadata, your receiver will attempt to display it. For streams that don't provide metadata directly (like many MP3 streams), you can enhance your Python script to fetch metadata from a separate API and send it to the receiver via custom messages.
+To play a different station:
+```bash
+python3 play_kozt.py "Bedroom Speaker" --url "http://stream.radioparadise.com/aac-128" --title "Radio Paradise" --no-kozt
+```
