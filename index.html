@@ -254,7 +254,7 @@
             height: 100% !important;
             overflow: hidden !important;
             visibility: visible !important;
-            opacity: 0.05 !important; /* Low opacity: Visible to OS, invisible to user */
+            opacity: 0.0001 !important; /* Almost invisible, but still "visible" to OS */
             pointer-events: none !important;
             z-index: -10 !important; /* Behind our UI */
             
@@ -273,10 +273,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.19 -->
+    <!-- Receiver Version: v5.21 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.19</div>
+    <div id="version-tag">v5.21</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
@@ -295,6 +295,7 @@
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
+        const RECEIVER_VERSION = 'v5.21';
 
         // Attempt to hide Shadow DOM elements of the player
         function hidePlayerInternals() {
@@ -512,7 +513,8 @@
                     context.sendCustomMessage(NAMESPACE, event.senderId, {
                         type: 'PONG',
                         visibilityState: document.visibilityState,
-                        standbyState: standbyState
+                        standbyState: standbyState,
+                        version: RECEIVER_VERSION
                     });
                     return;
                 }

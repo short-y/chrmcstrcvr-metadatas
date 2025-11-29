@@ -71,7 +71,8 @@ class RadioController(BaseController):
         if data.get('type') == 'PONG':
             visibility = data.get('visibilityState', 'unknown')
             standby = data.get('standbyState', 'unknown')
-            logging.debug(f"PONG received. Visibility: {visibility}, Standby: {standby}")
+            version = data.get('version', 'unknown')
+            logging.debug(f"PONG received. Version: {version}, Visibility: {visibility}, Standby: {standby}")
             self.pong_received.set()
             return True
             

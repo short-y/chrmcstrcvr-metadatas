@@ -253,7 +253,8 @@
             width: 100% !important;
             height: 100% !important;
             overflow: hidden !important;
-            opacity: 1 !important; /* Fully visible to the OS */
+            visibility: visible !important;
+            opacity: 0.0001 !important; /* Almost invisible, but still "visible" to OS */
             pointer-events: none !important;
             z-index: -10 !important; /* Behind our UI */
             
@@ -272,10 +273,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.17 -->
+    <!-- Receiver Version: v5.21 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.19</div>
+    <div id="version-tag">v5.21</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
