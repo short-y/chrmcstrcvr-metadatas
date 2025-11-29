@@ -594,7 +594,8 @@ if __name__ == "__main__":
     parser.add_argument("--title", default=DEFAULT_TITLE, help="Display Title")
     parser.add_argument("--image", default=DEFAULT_IMAGE_URL, help="Display Image URL")
     parser.add_argument("--app_id", default=DEFAULT_APP_ID, help="Custom Receiver App ID (Register at cast.google.com/publish)")
-    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--debug", action="store_true", help="Enable info-level logging (heartbeats, intervals)")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose debug logging (all internal logs)")
     # KOZT is enabled by default now. Use --no-kozt to disable.
     parser.add_argument("--no-kozt", action="store_false", dest="kozt", help="Disable KOZT metadata scraping")
     parser.set_defaults(kozt=True)
@@ -602,8 +603,15 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Configure logging: DEBUG if requested, otherwise INFO
-    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format='%(message)s')
+    # Configure logging based on flags
+    if args.verbose:
+        log_level = logging.DEBUG
+    elif args.debug:
+        log_level = logging.INFO
+    else:
+        log_level = logging.WARNING
+        
+    logging.basicConfig(level=log_level, format='%(message)s')
     
     # Resolve playlist if necessary
     final_url = resolve_playlist(args.url)
