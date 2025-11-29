@@ -21,6 +21,10 @@ DEFAULT_TITLE = "KOZT - The Coast"
 DEFAULT_SUBTITLE = "Mendocino County Public Broadcasting"
 DEFAULT_APP_ID = "6509B35C"
 
+# Silent Audio for "No-Stream" Mode (keeps receiver active)
+SILENT_STREAM_URL = "https://github.com/anars/blank-audio/blob/master/10-minutes-of-silence.mp3?raw=true"
+SILENT_STREAM_TYPE = "audio/mp3"
+
 NAMESPACE = 'urn:x-cast:com.example.radio'
 
 def discover_all_chromecasts(timeout=5):
@@ -350,8 +354,9 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
             print("Warning: Failed to get initial KOZT metadata. Using provided defaults.")
 
     # Prepare minimal metadata to suppress Default UI
+    # Trick: Use metadataType 1 (MOVIE) to force full-screen video UI on Pixel Tablet
     metadata = {
-        "metadataType": 0, # Generic
+        "metadataType": 1, 
         "title": " ", 
         "subtitle": " ",
         "images": []
@@ -365,12 +370,12 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         print(f"Launching Custom App ID: {app_id}")
         
         # Ensure any previous session is closed (helps with Pixel Tablet / Hubs)
-        try:
-            logging.debug("Ensuring previous app is closed...")
-            cast.quit_app()
-            time.sleep(3) 
-        except Exception as e:
-            logging.debug(f"Non-fatal error quitting app: {e}")
+        # try:
+        #     logging.debug("Ensuring previous app is closed...")
+        #     cast.quit_app()
+        #     time.sleep(3) 
+        # except Exception as e:
+        #     logging.debug(f"Non-fatal error quitting app: {e}")
 
         # Try to launch with a retry
         launch_success = False
@@ -409,11 +414,12 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         mc.block_until_active()
         print("Playback started!")
     else:
-        print("Mode: No-Stream. Skipping playback request. Displaying metadata only.")
-        if not app_id:
-            print("WARNING: --no-stream (or -ns) used without --app_id. The Default Media Receiver will not launch, and custom metadata will not be displayed.")
-            # We explicitly don't exit here to allow sending custom messages
-            # if the user just wants to see logs or an app is launched manually.
+        print("Mode: No-Stream. Playing SILENT track to keep receiver active/visible.")
+        # We must play *something* or the Pixel Tablet will revert to the dashboard.
+        # Use the silent MP3, but declare it as BUFFERED or LIVE.
+        mc.play_media(SILENT_STREAM_URL, SILENT_STREAM_TYPE, stream_type="BUFFERED", title=" ", thumb=None, metadata=metadata)
+        mc.block_until_active()
+        print("Silent Playback started!")
     
     # Send immediate update with REAL metadata to populate Custom UI
     time.sleep(1) # Wait for receiver to be ready
