@@ -106,6 +106,123 @@
             z-index: 10;
         }
 
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Google Sans', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Container to cover the default CAF player */
+        #custom-ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #121212;
+            z-index: 20000; /* Ensure it sits on top of everything */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            filter: blur(20px);
+            z-index: -1;
+        }
+
+        #version-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #aaa;
+            font-size: 12px;
+            z-index: 10000;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        #local-clock {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #ddd;
+            font-size: 2.5vh;
+            font-weight: bold;
+            z-index: 10000;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        #album-art {
+            width: 30vw;
+            height: 30vw;
+            max-width: 300px;
+            max-height: 300px;
+            background-color: #333;
+            margin-bottom: 2vh;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            transition: background-image 0.5s ease-in-out;
+            background-image: url('https://www.gstatic.com/images/branding/product/2x/chromecast_64dp.png');
+            background-repeat: no-repeat;
+            background-size: 50%;
+            position: relative;
+            z-index: 10;
+        }
+
+        #song-title {
+            font-size: 5vw;
+            font-weight: 400;
+            margin: 0 2vw;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+            max-width: 90%;
+            word-wrap: break-word;
+            color: #ffffff;
+        }
+
+        #artist-name {
+            font-size: 3vw;
+            color: #ddd;
+            margin-top: 1vh;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
+        #album-name {
+            font-size: 2.5vw;
+            color: #ccc;
+            margin-top: 0.5vh;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 10;
+        }
+
         #track-time {
             font-size: 2vw;
             color: #aaa;
@@ -133,12 +250,12 @@
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
-            width: 1px !important;
-            height: 1px !important;
+            width: 100% !important;
+            height: 100% !important;
             overflow: hidden !important;
-            opacity: 0.001 !important;
+            opacity: 1 !important; /* Fully visible to the OS */
             pointer-events: none !important;
-            z-index: -10 !important;
+            z-index: -10 !important; /* Behind our UI */
             
             /* CAF Specific CSS Variables to Hide UI */
             --logo-image: none;
@@ -158,7 +275,7 @@
     <!-- Receiver Version: v5.17 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.18</div>
+    <div id="version-tag">v5.19</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
