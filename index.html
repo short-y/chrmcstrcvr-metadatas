@@ -254,9 +254,11 @@
             height: 100% !important;
             overflow: hidden !important;
             visibility: visible !important;
-            opacity: 0.00001 !important; /* Practically invisible */
+            opacity: 0.00001 !important;
+            transform: scale(0.0001) !important; /* Shrink visually */
+            transform-origin: top left !important;
             pointer-events: none !important;
-            z-index: -10 !important; /* Behind our UI */
+            z-index: -10 !important;
             
             /* CAF Specific CSS Variables to Hide UI */
             --logo-image: none;
@@ -273,10 +275,10 @@
 </head>
 
 <body>
-    <!-- Receiver Version: v5.23 -->
+    <!-- Receiver Version: v5.24 -->
 
     <div id="bg-image"></div>
-    <div id="version-tag">v5.23</div>
+    <div id="version-tag">v5.24</div>
         <div id="local-clock">--:--</div>
         <div id="station-name"></div>
         <div id="album-art"></div>
@@ -295,7 +297,7 @@
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         const NAMESPACE = 'urn:x-cast:com.example.radio';
-        const RECEIVER_VERSION = 'v5.23';
+        const RECEIVER_VERSION = 'v5.24';
 
         // Attempt to hide Shadow DOM elements of the player
         function hidePlayerInternals() {
