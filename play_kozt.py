@@ -11,6 +11,7 @@ import zeroconf
 import threading
 import struct
 import json
+import signal
 from urllib.parse import quote
 
 # Default Stream (KOZT) 
@@ -26,6 +27,31 @@ SILENT_STREAM_URL = "https://github.com/anars/blank-audio/blob/master/10-minutes
 SILENT_STREAM_TYPE = "audio/mp3"
 
 NAMESPACE = 'urn:x-cast:com.example.radio'
+
+# Global state for signal handling
+current_cast = None
+current_browser = None
+current_mc = None
+
+def graceful_exit(signum, frame):
+    """Handle kill signals (SIGINT/SIGTERM) robustly."""
+    print("\nSignal received. Stopping playback...")
+    try:
+        if current_mc:
+             # Stop the media playback explicitly
+            current_mc.stop()
+        if current_cast:
+            # Quit the app to return to home screen/ambient mode
+            current_cast.quit_app()
+            time.sleep(1) # Ensure command leaves the network buffer
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+    
+    if current_browser:
+        current_browser.stop_discovery()
+        
+    print("Exiting.")
+    sys.exit(0)
 
 def discover_all_chromecasts(timeout=5):
     """
@@ -307,13 +333,17 @@ def scrape_kozt_now_playing():
         return None, None, None, None, None
 
 def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None, is_kozt_station=False, no_stream=False):
+    global current_cast, current_browser, current_mc
+    
     print(f"Searching for Chromecast: {device_name}...")
     chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=[device_name])
+    current_browser = browser
     
     if not chromecasts:
         # Try discovering all if specific one not found immediately
         print(f"Device '{device_name}' not found immediately. Scanning all devices...")
         chromecasts, browser = discover_all_chromecasts()
+        current_browser = browser
         # Filter manually
         chromecasts = [cc for cc in chromecasts if cc.name == device_name]
 
@@ -321,15 +351,15 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         print(f"Error: Could not find Chromecast named '{device_name}'.")
         sys.exit(1)
 
-    cast = chromecasts[0]
-    cast.wait()
-    print(f"Connected to {cast.name}!")
+    current_cast = chromecasts[0]
+    current_cast.wait()
+    print(f"Connected to {current_cast.name}!")
 
     # Register Custom Controller
     radio_controller = RadioController()
-    cast.register_handler(radio_controller)
+    current_cast.register_handler(radio_controller)
 
-    mc = cast.media_controller
+    current_mc = current_cast.media_controller
     
     # If KOZT, try to get initial metadata for play_media call
     initial_title = title
@@ -383,7 +413,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
         for attempt in range(2):
             try:
                 print(f"Starting app {app_id} (Attempt {attempt + 1})...")
-                cast.start_app(app_id) # Custom Receiver
+                current_cast.start_app(app_id) # Custom Receiver
                 launch_success = True
                 time.sleep(3) # Wait for app to load
                 break
@@ -411,15 +441,15 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     if not no_stream:
         print(f"Playing {initial_title} ({stream_url})...")
         # Use generic title/thumb to avoid Default UI clutter
-        mc.play_media(stream_url, stream_type, stream_type="LIVE", title=" ", thumb=None, metadata=metadata)
-        mc.block_until_active()
+        current_mc.play_media(stream_url, stream_type, stream_type="LIVE", title=" ", thumb=None, metadata=metadata)
+        current_mc.block_until_active()
         print("Playback started!")
     else:
         print("Mode: No-Stream. Playing SILENT track to keep receiver active/visible.")
         # We must play *something* or the Pixel Tablet will revert to the dashboard.
         # Use the silent MP3, but declare it as BUFFERED or LIVE.
-        mc.play_media(SILENT_STREAM_URL, SILENT_STREAM_TYPE, stream_type="BUFFERED", title=" ", thumb=None, metadata=metadata)
-        mc.block_until_active()
+        current_mc.play_media(SILENT_STREAM_URL, SILENT_STREAM_TYPE, stream_type="BUFFERED", title=" ", thumb=None, metadata=metadata)
+        current_mc.block_until_active()
         print("Silent Playback started!")
     
     # Send immediate update with REAL metadata to populate Custom UI
@@ -429,10 +459,10 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     
     # Verify the correct app is running AFTER playback starts
     time.sleep(1) # Allow status to update
-    if app_id and cast.status:
-         logging.debug(f"Debug: Active App ID is {cast.status.app_id}")
-         if cast.status.app_id != app_id:
-             print(f"WARNING: Active App ID ({cast.status.app_id}) does not match requested ID ({app_id}).")
+    if app_id and current_cast.status:
+         logging.debug(f"Debug: Active App ID is {current_cast.status.app_id}")
+         if current_cast.status.app_id != app_id:
+             print(f"WARNING: Active App ID ({current_cast.status.app_id}) does not match requested ID ({app_id}).")
              print("The device may have fallen back to the Default Media Receiver.")
     elif app_id:
          logging.debug("Debug: Could not determine Active App ID (status is None)")
@@ -443,151 +473,144 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     
     consecutive_errors = 0
 
-    try:
-        # KOZT SPECIFIC LOGIC - Check explicit flag first
-        if is_kozt_station or "kozt" in stream_url.lower():
-            print("--- Detected KOZT Stream. Using Amperwave JSON API for Metadata ---")
-            last_song_title = None
-            last_artist_name = None
-            last_heartbeat_time = time.time()
-            
-            while True:
-                # Heartbeat Log
-                if time.time() - last_heartbeat_time > 30:
-                    logging.info(f"Heartbeat: Sender is alive. Current App ID: {cast.status.app_id if cast.status else 'Unknown'}")
-                    last_heartbeat_time = time.time()
-
-                # 1. Keepalive / Status Check
-                try:
-                    # Update standard status
-                    cast.socket_client.receiver_controller.update_status()
-                    
-                    # Send custom ping to ensure app pipe is open
-                    logging.debug("Sending Ping...")
-                    keepalive_success = radio_controller.send_keepalive()
-                    if not keepalive_success:
-                        logging.warning("Ping Failed!")
-                        raise Exception("Keepalive PING failed")
-                    
-                    consecutive_errors = 0 # Reset on success
-                    logging.debug("Ping Successful.")
-                except Exception as e:
-                    consecutive_errors += 1
-                    logging.warning(f"Connection Check Failed ({consecutive_errors}/3): {e}")
-                    if consecutive_errors >= 3:
-                        logging.warning("Too many connection errors. Assuming disconnected.")
-                        break
-                
-                # Check for explicit disconnect message
-                if radio_controller.received_disconnect:
-                    logging.warning("Explicit disconnect received from Receiver.")
-                    break
-                
-                # 2. Check logical connection state
-                if not cast.socket_client.is_connected:
-                    logging.warning("Chromecast connection lost (socket).")
-                    break
-                
-                if cast.status and cast.status.app_id != app_id:
-                    logging.warning(f"App ID changed to {cast.status.app_id} (expected {app_id}). Relaunching...")
-                    break
-                
-                # 3. App Logic (Fetch Data)
-                song_title, artist_name, fetched_image_url, album_name, track_time = scrape_kozt_now_playing()
-                
-                if song_title and artist_name and (song_title != last_song_title or artist_name != last_artist_name):
-                    logging.debug(f"KOZT Monitor: New Track -> {song_title} / {artist_name}")
-                    last_song_title = song_title
-                    last_artist_name = artist_name
-                    
-                    # Use fetched image URL directly (no iTunes lookup needed)
-                    if fetched_image_url:
-                        logging.debug(f"  Album Art: {fetched_image_url}")
-                        final_image_url = fetched_image_url
-                    else:
-                        # Fallback to iTunes logic if API has data but no image (rare)
-                        # For now, we try iTunes if JSON lacks image.
-                        final_image_url = fetch_album_art(artist_name, song_title) 
-                    
-                    try:
-                        # Use provided 'title' which defaults to "KOZT - The Coast" as station_name
-                        radio_controller.send_track_update(song_title, artist_name, final_image_url, album_name, track_time, station_name=title)
-                        consecutive_errors = 0
-                    except Exception as e:
-                        logging.debug(f"KOZT Monitor: Send failed: {e}")
-                        # If send fails here, the next loop's keepalive will likely catch it too
-                
-                # Random refresh interval for next poll
-                sleep_delay = random.randint(10, 25)
-                logging.info(f"KOZT Monitor: Waiting {sleep_delay} seconds until next refresh.")
-                time.sleep(sleep_delay)
+    # KOZT SPECIFIC LOGIC - Check explicit flag first
+    if is_kozt_station or "kozt" in stream_url.lower():
+        print("--- Detected KOZT Stream. Using Amperwave JSON API for Metadata ---")
+        last_song_title = None
+        last_artist_name = None
+        last_heartbeat_time = time.time()
         
-        # GENERIC ICECAST LOGIC
-        
-        # GENERIC ICECAST LOGIC
-        else:
-            print("--- Using Generic Icecast Metadata Monitor ---")
-            monitor_thread = threading.Thread(target=metadata_monitor, args=(stream_url, radio_controller, stop_event))
-            monitor_thread.daemon = True
-            monitor_thread.start()
+        while True:
+            # Heartbeat Log
+            if time.time() - last_heartbeat_time > 30:
+                logging.info(f"Heartbeat: Sender is alive. Current App ID: {current_cast.status.app_id if current_cast.status else 'Unknown'}")
+                last_heartbeat_time = time.time()
+
+            # 1. Keepalive / Status Check
+            try:
+                # Update standard status
+                current_cast.socket_client.receiver_controller.update_status()
+                
+                # Send custom ping to ensure app pipe is open
+                logging.debug("Sending Ping...")
+                keepalive_success = radio_controller.send_keepalive()
+                if not keepalive_success:
+                    logging.warning("Ping Failed!")
+                    raise Exception("Keepalive PING failed")
+                
+                consecutive_errors = 0 # Reset on success
+                logging.debug("Ping Successful.")
+            except Exception as e:
+                consecutive_errors += 1
+                logging.warning(f"Connection Check Failed ({consecutive_errors}/3): {e}")
+                if consecutive_errors >= 3:
+                    logging.warning("Too many connection errors. Assuming disconnected.")
+                    break
             
-            last_ping_time = time.time()
-            last_heartbeat_time = time.time()
-
-            while True:
-                # Heartbeat Log every 30s
-                if time.time() - last_heartbeat_time > 30:
-                    logging.info(f"Heartbeat: Sender is alive. Current App ID: {cast.status.app_id if cast.status else 'Unknown'}")
-                    last_heartbeat_time = time.time()
-
+            # Check for explicit disconnect message
+            if radio_controller.received_disconnect:
+                logging.warning("Explicit disconnect received from Receiver.")
+                break
+            
+            # 2. Check logical connection state
+            if not current_cast.socket_client.is_connected:
+                logging.warning("Chromecast connection lost (socket).")
+                break
+            
+            if current_cast.status and current_cast.status.app_id != app_id:
+                logging.warning(f"App ID changed to {current_cast.status.app_id} (expected {app_id}). Relaunching...")
+                break
+            
+            # 3. App Logic (Fetch Data)
+            song_title, artist_name, fetched_image_url, album_name, track_time = scrape_kozt_now_playing()
+            
+            if song_title and artist_name and (song_title != last_song_title or artist_name != last_artist_name):
+                logging.debug(f"KOZT Monitor: New Track -> {song_title} / {artist_name}")
+                last_song_title = song_title
+                last_artist_name = artist_name
+                
+                # Use fetched image URL directly (no iTunes lookup needed)
+                if fetched_image_url:
+                    logging.debug(f"  Album Art: {fetched_image_url}")
+                    final_image_url = fetched_image_url
+                else:
+                    # Fallback to iTunes logic if API has data but no image (rare)
+                    # For now, we try iTunes if JSON lacks image.
+                    final_image_url = fetch_album_art(artist_name, song_title) 
+                
                 try:
-                    # Update status frequently
-                    cast.socket_client.receiver_controller.update_status()
-                    
-                    # Send Ping every 10 seconds
-                    if time.time() - last_ping_time > 10:
-                         logging.debug("Sending Ping...")
-                         if not radio_controller.send_keepalive():
-                             logging.warning("Ping Failed!")
-                             raise Exception("Keepalive PING failed")
-                         
-                         # Only reset consecutive errors if Ping succeeded
-                         consecutive_errors = 0 
-                         last_ping_time = time.time()
-                         logging.debug("Ping Successful.")
-
+                    # Use provided 'title' which defaults to "KOZT - The Coast" as station_name
+                    radio_controller.send_track_update(song_title, artist_name, final_image_url, album_name, track_time, station_name=title)
+                    consecutive_errors = 0
                 except Exception as e:
-                    consecutive_errors += 1
-                    logging.warning(f"Connection Check Failed ({consecutive_errors}/3): {e}")
-                    if consecutive_errors >= 3:
-                         logging.warning("Too many connection errors. Assuming disconnected.")
-                         break
+                    logging.debug(f"KOZT Monitor: Send failed: {e}")
+                    # If send fails here, the next loop's keepalive will likely catch it too
+            
+            # Random refresh interval for next poll
+            sleep_delay = random.randint(10, 25)
+            logging.info(f"KOZT Monitor: Waiting {sleep_delay} seconds until next refresh.")
+            time.sleep(sleep_delay)
+    
+    # GENERIC ICECAST LOGIC
+    else:
+        print("--- Using Generic Icecast Metadata Monitor ---")
+        monitor_thread = threading.Thread(target=metadata_monitor, args=(stream_url, radio_controller, stop_event))
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        last_ping_time = time.time()
+        last_heartbeat_time = time.time()
+
+        while True:
+            # Heartbeat Log every 30s
+            if time.time() - last_heartbeat_time > 30:
+                logging.info(f"Heartbeat: Sender is alive. Current App ID: {current_cast.status.app_id if current_cast.status else 'Unknown'}")
+                last_heartbeat_time = time.time()
+
+            try:
+                # Update status frequently
+                current_cast.socket_client.receiver_controller.update_status()
                 
-                # Check for explicit disconnect message
-                if radio_controller.received_disconnect:
-                    logging.warning("Explicit disconnect received from Receiver.")
-                    break
+                # Send Ping every 10 seconds
+                if time.time() - last_ping_time > 10:
+                     logging.debug("Sending Ping...")
+                     if not radio_controller.send_keepalive():
+                         logging.warning("Ping Failed!")
+                         raise Exception("Keepalive PING failed")
+                     
+                     # Only reset consecutive errors if Ping succeeded
+                     consecutive_errors = 0 
+                     last_ping_time = time.time()
+                     logging.debug("Ping Successful.")
 
-                if not cast.socket_client.is_connected:
-                    logging.warning("Chromecast connection lost.")
-                    break
-                
-                if cast.status and cast.status.app_id != app_id:
-                    logging.warning(f"App ID changed to {cast.status.app_id}. Relaunching...")
-                    break
+            except Exception as e:
+                consecutive_errors += 1
+                logging.warning(f"Connection Check Failed ({consecutive_errors}/3): {e}")
+                if consecutive_errors >= 3:
+                     logging.warning("Too many connection errors. Assuming disconnected.")
+                     break
+            
+            # Check for explicit disconnect message
+            if radio_controller.received_disconnect:
+                logging.warning("Explicit disconnect received from Receiver.")
+                break
 
-                time.sleep(1)
+            if not current_cast.socket_client.is_connected:
+                logging.warning("Chromecast connection lost.")
+                break
+            
+            if current_cast.status and current_cast.status.app_id != app_id:
+                logging.warning(f"App ID changed to {current_cast.status.app_id}. Relaunching...")
+                break
 
-    except KeyboardInterrupt:
-        print("Stopping...")
-        stop_event.set()
-        # mc.stop() # Uncomment if you want to stop playback on exit
-        if app_id:
-             cast.quit_app()
-        browser.stop_discovery()
-        raise # Re-raise to stop the outer loop
+            time.sleep(1)
+
 
 if __name__ == "__main__":
+    # Register signal handlers for robust exit (especially for PyInstaller)
+    signal.signal(signal.SIGINT, graceful_exit)
+    signal.signal(signal.SIGTERM, graceful_exit)
+    
     parser = argparse.ArgumentParser(description="Play KOZT on Chromecast.")
     parser.add_argument("device_name", help="The friendly name of the Chromecast (e.g., 'Living Room TV')")
     parser.add_argument("--url", default=DEFAULT_STREAM_URL, help="Stream URL")
@@ -618,17 +641,10 @@ if __name__ == "__main__":
     
     browser = None # Initialize browser here to be accessible in finally
     
-    try:
-        while True:
-            try:
-                play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt, args.no_stream)
-            except Exception as e:
-                logging.error(f"Connection lost or error occurred: {e}")
-                logging.info("Attempting to reconnect in 5 seconds...")
-                time.sleep(5)
-    except KeyboardInterrupt:
-        logging.info("Script stopped by user.")
-    finally:
-        if browser:
-            logging.debug("Stopping Chromecast discovery.")
-            browser.stop_discovery()
+    while True:
+        try:
+            play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt, args.no_stream)
+        except Exception as e:
+            logging.error(f"Connection lost or error occurred: {e}")
+            logging.info("Attempting to reconnect in 5 seconds...")
+            time.sleep(5)

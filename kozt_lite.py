@@ -9,6 +9,7 @@ from pychromecast.discovery import CastBrowser, SimpleCastListener
 import zeroconf
 import threading
 import struct
+import signal
 from urllib.parse import quote
 
 # Default Stream (KOZT) 
@@ -19,6 +20,29 @@ DEFAULT_TITLE = "KOZT - The Coast"
 
 # Silent Audio for "No-Stream" Mode
 SILENT_STREAM_URL = "https://github.com/anars/blank-audio/blob/master/10-minutes-of-silence.mp3?raw=true"
+
+# Global state for signal handling
+current_cast = None
+current_browser = None
+current_mc = None
+
+def graceful_exit(signum, frame):
+    """Handle kill signals (SIGINT/SIGTERM) robustly."""
+    print("\nSignal received. Stopping playback...")
+    try:
+        if current_mc:
+            current_mc.stop()
+        if current_cast:
+            current_cast.quit_app()
+            time.sleep(1) # Ensure command leaves the network buffer
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+    
+    if current_browser:
+        current_browser.stop_discovery()
+        
+    print("Exiting.")
+    sys.exit(0)
 
 def discover_all_chromecasts(timeout=5):
     """
@@ -151,23 +175,27 @@ def update_media_metadata(mc, stream_url, stream_type, title, artist, album, ima
         print(f"Failed to update metadata: {e}")
 
 def play_radio(device_name, stream_url, stream_type, default_title, default_image, is_kozt_station=False):
+    global current_cast, current_browser, current_mc
+    
     print(f"Searching for Chromecast: {device_name}...")
     chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=[device_name])
+    current_browser = browser
     
     if not chromecasts:
         print(f"Device '{device_name}' not found immediately. Scanning all devices...")
         chromecasts, browser = discover_all_chromecasts()
+        current_browser = browser
         chromecasts = [cc for cc in chromecasts if cc.name == device_name]
 
     if not chromecasts:
         print(f"Error: Could not find Chromecast named '{device_name}'.")
         sys.exit(1)
 
-    cast = chromecasts[0]
-    cast.wait()
-    print(f"Connected to {cast.name}!")
+    current_cast = chromecasts[0]
+    current_cast.wait()
+    print(f"Connected to {current_cast.name}!")
 
-    mc = cast.media_controller
+    current_mc = current_cast.media_controller
     
     # Initial Metadata
     current_title = "Live Radio"
@@ -188,50 +216,44 @@ def play_radio(device_name, stream_url, stream_type, default_title, default_imag
             print(f"Initial KOZT metadata: {current_title} - {current_artist} (Album: {current_album})")
     
     # Start Playback
-    update_media_metadata(mc, stream_url, stream_type, current_title, current_artist, current_album, current_image)
-    mc.block_until_active()
+    update_media_metadata(current_mc, stream_url, stream_type, current_title, current_artist, current_album, current_image)
+    current_mc.block_until_active()
     print("Playback started!")
     
     # Monitor Loop
     last_title = current_title
     last_artist = current_artist
     
-    try:
-        while True:
-            time.sleep(15) # Poll every 15 seconds
+    while True:
+        time.sleep(15) # Poll every 15 seconds
+        
+        if is_kozt_station or "kozt" in stream_url.lower():
+            song_title, artist_name, fetched_image, album_name = scrape_kozt_now_playing()
             
-            if is_kozt_station or "kozt" in stream_url.lower():
-                song_title, artist_name, fetched_image, album_name = scrape_kozt_now_playing()
-                
-                if song_title and artist_name: 
-                     # Check if track changed
-                     if song_title != last_title or artist_name != last_artist:
-                         print(f"New Track Detected: {song_title} - {artist_name} (Album: {album_name})")
-                         
-                         last_title = song_title
-                         last_artist = artist_name
-                         
-                         final_image = fetched_image if fetched_image else fetch_album_art(artist_name, song_title)
-                         if not final_image:
-                             final_image = default_image
-                             
-                         update_media_metadata(mc, stream_url, stream_type, song_title, artist_name, album_name, final_image)
-            
-            # Ensure connection
-            if not cast.socket_client.is_connected:
-                print("Connection lost. Exiting loop.")
-                break
-
-    except KeyboardInterrupt:
-        print("Stopping...")
-        try:
-            cast.quit_app()
-        except Exception as e:
-            print(f"Error quitting app: {e}")
-        browser.stop_discovery()
-        sys.exit(0)
+            if song_title and artist_name: 
+                    # Check if track changed
+                    if song_title != last_title or artist_name != last_artist:
+                        print(f"New Track Detected: {song_title} - {artist_name} (Album: {album_name})")
+                        
+                        last_title = song_title
+                        last_artist = artist_name
+                        
+                        final_image = fetched_image if fetched_image else fetch_album_art(artist_name, song_title)
+                        if not final_image:
+                            final_image = default_image
+                            
+                        update_media_metadata(current_mc, stream_url, stream_type, song_title, artist_name, album_name, final_image)
+        
+        # Ensure connection
+        if not current_cast.socket_client.is_connected:
+            print("Connection lost. Exiting loop.")
+            break
 
 if __name__ == "__main__":
+    # Register signal handlers for robust exit (especially for PyInstaller)
+    signal.signal(signal.SIGINT, graceful_exit)
+    signal.signal(signal.SIGTERM, graceful_exit)
+
     parser = argparse.ArgumentParser(description="Play KOZT Radio on Default Chromecast Receiver.")
     parser.add_argument("device_name", help="The friendly name of the Chromecast")
     parser.add_argument("-ns", "--no-stream", action="store_true", help="Display metadata only (play silent audio)")
@@ -253,4 +275,4 @@ if __name__ == "__main__":
                 print(f"Error: {e}")
                 time.sleep(5)
     except KeyboardInterrupt:
-        print("Aborted.")
+        graceful_exit(signal.SIGINT, None)
