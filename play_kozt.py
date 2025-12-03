@@ -13,6 +13,7 @@ import struct
 import json
 import signal
 import atexit
+import os
 from urllib.parse import quote
 
 # Default Stream (KOZT) 
@@ -36,54 +37,77 @@ current_mc = None
 current_zconf = None
 cleanup_in_progress = False
 
+def safe_write(msg):
+    """Signal-safe write to stdout."""
+    try:
+        os.write(sys.stdout.fileno(), f"{msg}\n".encode())
+    except:
+        pass
+
 def graceful_exit(signum, frame):
     """Handle kill signals (SIGINT/SIGTERM) robustly."""
     global cleanup_in_progress
 
     if cleanup_in_progress:
         # Already cleaning up, force exit
-        print("\nForced exit.")
-        sys.exit(1)
+        safe_write("\nForced exit.")
+        os._exit(1)
 
     cleanup_in_progress = True
-    print("\nSignal received. Stopping playback...")
+    safe_write("\nSignal received. Stopping playback...")
 
     try:
         # Stop media playback first
         if current_mc:
-            print("Stopping media controller...")
+            safe_write("Stopping media controller...")
             current_mc.stop()
             time.sleep(0.5)
 
         # Quit the app
         if current_cast:
-            print("Quitting Cast app...")
+            safe_write("Quitting Cast app...")
             try:
                 current_cast.quit_app()
                 time.sleep(1)  # Wait for quit command to be sent
             except Exception as e:
-                print(f"Error quitting app: {e}")
+                safe_write(f"Error quitting app: {e}")
 
         # Stop discovery
         if current_browser:
-            print("Stopping discovery...")
+            safe_write("Stopping discovery...")
             current_browser.stop_discovery()
 
         # Close zeroconf
         if current_zconf:
-            print("Closing zeroconf...")
+            safe_write("Closing zeroconf...")
             current_zconf.close()
 
     except Exception as e:
-        print(f"Error during cleanup: {e}")
+        safe_write(f"Error during cleanup: {e}")
 
-    print("Exiting.")
-    sys.exit(0)
+    safe_write("Exiting.")
+    os._exit(0)
 
 def cleanup_atexit():
     """Cleanup function registered with atexit as backup."""
-    if not cleanup_in_progress:
-        graceful_exit(None, None)
+    global cleanup_in_progress
+
+    if cleanup_in_progress:
+        return
+
+    cleanup_in_progress = True
+
+    try:
+        if current_mc:
+            current_mc.stop()
+        if current_cast:
+            current_cast.quit_app()
+        if current_browser:
+            current_browser.stop_discovery()
+        if current_zconf:
+            current_zconf.close()
+    except:
+        pass
 
 def discover_all_chromecasts(timeout=5):
     """
@@ -693,6 +717,8 @@ if __name__ == "__main__":
         try:
             play_radio(args.device_name, final_url, DEFAULT_STREAM_TYPE, args.title, args.image, args.app_id, args.kozt, args.no_stream)
         except Exception as e:
+            if cleanup_in_progress:
+                break
             logging.error(f"Connection lost or error occurred: {e}")
             logging.info("Attempting to reconnect in 5 seconds...")
             time.sleep(5)
