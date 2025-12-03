@@ -12,6 +12,7 @@ import threading
 import struct
 import json
 import signal
+import atexit
 from urllib.parse import quote
 
 # Default Stream (KOZT) 
@@ -32,51 +33,87 @@ NAMESPACE = 'urn:x-cast:com.example.radio'
 current_cast = None
 current_browser = None
 current_mc = None
+current_zconf = None
+cleanup_in_progress = False
 
 def graceful_exit(signum, frame):
     """Handle kill signals (SIGINT/SIGTERM) robustly."""
+    global cleanup_in_progress
+
+    if cleanup_in_progress:
+        # Already cleaning up, force exit
+        print("\nForced exit.")
+        sys.exit(1)
+
+    cleanup_in_progress = True
     print("\nSignal received. Stopping playback...")
+
     try:
+        # Stop media playback first
         if current_mc:
-             # Stop the media playback explicitly
+            print("Stopping media controller...")
             current_mc.stop()
+            time.sleep(0.5)
+
+        # Quit the app
         if current_cast:
-            # Quit the app to return to home screen/ambient mode
-            current_cast.quit_app()
-            time.sleep(1) # Ensure command leaves the network buffer
+            print("Quitting Cast app...")
+            try:
+                current_cast.quit_app()
+                time.sleep(1)  # Wait for quit command to be sent
+            except Exception as e:
+                print(f"Error quitting app: {e}")
+
+        # Stop discovery
+        if current_browser:
+            print("Stopping discovery...")
+            current_browser.stop_discovery()
+
+        # Close zeroconf
+        if current_zconf:
+            print("Closing zeroconf...")
+            current_zconf.close()
+
     except Exception as e:
         print(f"Error during cleanup: {e}")
-    
-    if current_browser:
-        current_browser.stop_discovery()
-        
+
     print("Exiting.")
     sys.exit(0)
+
+def cleanup_atexit():
+    """Cleanup function registered with atexit as backup."""
+    if not cleanup_in_progress:
+        graceful_exit(None, None)
 
 def discover_all_chromecasts(timeout=5):
     """
     Discover all chromecasts on the network using CastBrowser directly,
     avoiding the deprecated discover_chromecasts function.
     """
+    global current_zconf
+
     found_chromecasts = []
-    zconf = zeroconf.Zeroconf()
-    
+
+    # Reuse existing zeroconf or create new one
+    if not current_zconf:
+        current_zconf = zeroconf.Zeroconf()
+
     # SimpleCastListener expects a callback for add (and optionally remove/update)
     # We just need to start discovery and let the browser populate browser.devices
     listener = SimpleCastListener(lambda uuid, service: None)
-    browser = CastBrowser(listener, zconf)
+    browser = CastBrowser(listener, current_zconf)
     browser.start_discovery()
-    
+
     print(f"Scanning for devices ({timeout}s)...")
     time.sleep(timeout)
-    
+
     for uuid, service in browser.devices.items():
         try:
-             cc = pychromecast.get_chromecast_from_cast_info(service, zconf)
+             cc = pychromecast.get_chromecast_from_cast_info(service, current_zconf)
              found_chromecasts.append(cc)
         except Exception as e:
              logging.debug(f"Error creating Chromecast object for {uuid}: {e}")
-             
+
     return found_chromecasts, browser
 
 class RadioController(BaseController):
@@ -333,12 +370,20 @@ def scrape_kozt_now_playing():
         return None, None, None, None, None
 
 def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=None, is_kozt_station=False, no_stream=False):
-    global current_cast, current_browser, current_mc
-    
+    global current_cast, current_browser, current_mc, current_zconf
+
     print(f"Searching for Chromecast: {device_name}...")
-    chromecasts, browser = pychromecast.get_listed_chromecasts(friendly_names=[device_name])
+
+    # Create zeroconf instance if not already created
+    if not current_zconf:
+        current_zconf = zeroconf.Zeroconf()
+
+    chromecasts, browser = pychromecast.get_listed_chromecasts(
+        friendly_names=[device_name],
+        zeroconf_instance=current_zconf
+    )
     current_browser = browser
-    
+
     if not chromecasts:
         # Try discovering all if specific one not found immediately
         print(f"Device '{device_name}' not found immediately. Scanning all devices...")
@@ -610,7 +655,10 @@ if __name__ == "__main__":
     # Register signal handlers for robust exit (especially for PyInstaller)
     signal.signal(signal.SIGINT, graceful_exit)
     signal.signal(signal.SIGTERM, graceful_exit)
-    
+
+    # Register atexit handler as backup cleanup mechanism
+    atexit.register(cleanup_atexit)
+
     parser = argparse.ArgumentParser(description="Play KOZT on Chromecast.")
     parser.add_argument("device_name", help="The friendly name of the Chromecast (e.g., 'Living Room TV')")
     parser.add_argument("--url", default=DEFAULT_STREAM_URL, help="Stream URL")
