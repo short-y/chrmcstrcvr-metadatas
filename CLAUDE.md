@@ -193,3 +193,39 @@ Implements graceful cleanup for SIGINT/SIGTERM to properly stop playback and qui
 3. Test lite version sender by running `kozt_lite.py`
 4. For Pixel Tablet testing: disable screen lock, use `-ns` mode, tap screen after launch
 5. Verify version synchronization between `index.html` and `receiver.html`
+
+## Documentation Workflow
+
+**IMPORTANT**: For all significant changes, create documentation in the `docs/` directory.
+
+### When to Document
+Document changes when:
+- Fixing bugs (especially non-obvious ones)
+- Adding new features
+- Making architectural changes
+- Solving PyInstaller or platform-specific issues
+- Implementing workarounds for device constraints
+
+### Documentation Process
+1. **Create a markdown file** in `docs/` with a descriptive name:
+   - `{component}_{type}.md` (e.g., `kozt_lite_fixes.md`, `pixel_tablet_hub_mode.md`)
+
+2. **Include in the file**:
+   - **Problem**: What issue was being solved
+   - **Root Causes**: Why the problem occurred
+   - **Changes Made**: Technical details of the solution
+   - **Testing**: How to verify the fix works
+   - **Related Changes**: Links to other relevant docs
+
+3. **Update `docs/README.md`**: Add a summary of the new documentation file
+
+4. **Commit documentation with code changes**: Include the docs file in the same commit as the code changes when possible
+
+5. **Update CLAUDE.md if needed**: If the change affects development workflow or introduces new patterns that future AI assistants should know about
+
+### Example
+When fixing a PyInstaller cleanup issue:
+- Create `docs/{script_name}_fixes.md` documenting the problem and solution
+- Update `docs/README.md` with a brief entry
+- Commit both the code changes and documentation together
+- Update CLAUDE.md if the pattern should be applied to other scripts
