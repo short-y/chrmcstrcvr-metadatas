@@ -1,0 +1,12 @@
+# Android
+.gradle/
+app/build/
+local.properties
+.idea/
+.DS_Store
+
+# Python / PyInstaller
+__pycache__/
+*.py[cod]
+dist/
+build/
