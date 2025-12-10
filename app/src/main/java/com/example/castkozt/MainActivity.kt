@@ -94,9 +94,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         viewModel.appendLog("MainActivity onCreate.")
         
+        val permissionsToRequest = mutableListOf<String>()
+
         // Request permissions for Android 12+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12
-            val permissionsToRequest = mutableListOf<String>()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13
                 permissionsToRequest.add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
             }
