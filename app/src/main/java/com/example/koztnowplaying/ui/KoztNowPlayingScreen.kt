@@ -122,7 +122,7 @@ fun KoztNowPlayingScreen(
             }
         }
     }
-
+}
 
 @Composable
 fun CastButton() {
