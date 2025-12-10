@@ -1,6 +1,9 @@
 package com.example.castkozt
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -15,11 +18,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
+import androidx.mediarouter.media.MediaControlIntent
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
-import androidx.mediarouter.media.MediaControlIntent
-import androidx.core.content.ContextCompat
-import android.content.pm.PackageManager
 import com.example.castkozt.data.TrackInfo
 import com.example.castkozt.ui.KoztNowPlayingScreen
 import com.example.castkozt.ui.MainViewModel
@@ -41,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     private var castSession: CastSession? = null
     private lateinit var castContext: CastContext
     private var mediaRouter: MediaRouter? = null
+    private var multicastLock: WifiManager.MulticastLock? = null
     private var updateJob: Job? = null
 
     // Constants from python script
@@ -164,6 +167,17 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         viewModel.appendLog("MainActivity onResume.")
 
+        // Acquire Multicast Lock
+        try {
+            val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            multicastLock = wifi.createMulticastLock("multicastLock")
+            multicastLock?.setReferenceCounted(true)
+            multicastLock?.acquire()
+            viewModel.appendLog("MulticastLock acquired.")
+        } catch (e: Exception) {
+            viewModel.appendLog("Error acquiring MulticastLock: ${e.message}")
+        }
+
         // 1. Explicit Permission Check
         val locationPermission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
         val bluetoothScanPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -208,6 +222,14 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         viewModel.appendLog("MainActivity onPause.")
+        
+        try {
+            multicastLock?.release()
+            viewModel.appendLog("MulticastLock released.")
+        } catch (e: Exception) {
+            // Ignore release errors
+        }
+
         try {
             castContext.sessionManager.removeSessionManagerListener(sessionManagerListener, CastSession::class.java)
             mediaRouter?.removeCallback(mediaRouterCallback)

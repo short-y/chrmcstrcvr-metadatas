@@ -6,13 +6,13 @@ lifecycleRuntimeKtx = "2.7.0"
 lifecycleViewmodelKtx = "2.7.0"
 activityCompose = "1.8.2"
 composeBom = "2023.08.00"
-playServicesCastFramework = "21.4.0"
+playServicesCastFramework = "22.0.0"
 retrofit = "2.9.0"
 converterGson = "2.9.0"
 coilCompose = "2.5.0"
 appcompat = "1.6.1"
 material = "1.11.0"
-mediarouter = "1.6.0"
+mediarouter = "1.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
