@@ -1,8 +1,11 @@
 package com.example.castkozt
 
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -38,30 +41,60 @@ class MainActivity : AppCompatActivity() {
     private val SILENT_STREAM_URL = "https://github.com/anars/blank-audio/blob/master/10-minutes-of-silence.mp3?raw=true"
     private val DEFAULT_IMAGE_URL = "https://kozt.com/wp-content/uploads/KOZT-Logo-No-Tag.png"
     
+    private val requestPermissionLauncher: ActivityResultLauncher<Array<String>> =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            permissions.entries.forEach {
+                viewModel.appendLog("Permission '${it.key}' granted: ${it.value}")
+            }
+        }
+
     private val sessionManagerListener = object : SessionManagerListener<CastSession> {
         override fun onSessionStarted(session: CastSession, sessionId: String) {
             castSession = session
+            viewModel.appendLog("CastSession started: ${session.castDevice?.friendlyName}")
             updateCastMedia()
         }
         override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {
             castSession = session
+            viewModel.appendLog("CastSession resumed: ${session.castDevice?.friendlyName} (wasSuspended: $wasSuspended)")
             updateCastMedia()
         }
-        override fun onSessionEnded(session: CastSession, error: Int) { castSession = null }
-        override fun onSessionStarting(session: CastSession) {}
-        override fun onSessionResuming(session: CastSession, sessionId: String) {}
-        override fun onSessionStartFailed(session: CastSession, error: Int) {}
-        override fun onSessionResumeFailed(session: CastSession, error: Int) {}
-        override fun onSessionEnding(session: CastSession) {}
-        override fun onSessionSuspended(session: CastSession, reason: Int) {}
+        override fun onSessionEnded(session: CastSession, error: Int) {
+            castSession = null
+            viewModel.appendLog("CastSession ended (error: $error)")
+        }
+        override fun onSessionStarting(session: CastSession) { viewModel.appendLog("CastSession starting...") }
+        override fun onSessionResuming(session: CastSession, sessionId: String) { viewModel.appendLog("CastSession resuming...") }
+        override fun onSessionStartFailed(session: CastSession, error: Int) { viewModel.appendLog("CastSession start failed (error: $error)") }
+        override fun onSessionResumeFailed(session: CastSession, error: Int) { viewModel.appendLog("CastSession resume failed (error: $error)") }
+        override fun onSessionEnding(session: CastSession) { viewModel.appendLog("CastSession ending...") }
+        override fun onSessionSuspended(session: CastSession, reason: Int) { viewModel.appendLog("CastSession suspended (reason: $reason)") }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewModel.appendLog("MainActivity onCreate.")
         
+        // Request permissions for Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12
+            val permissionsToRequest = mutableListOf<String>()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Android 13
+                permissionsToRequest.add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
+            }
+            permissionsToRequest.add(android.Manifest.permission.BLUETOOTH_SCAN)
+            permissionsToRequest.add(android.Manifest.permission.BLUETOOTH_CONNECT)
+
+            if (permissionsToRequest.isNotEmpty()) {
+                requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+            }
+        }
+
         try {
+            viewModel.appendLog("Initializing CastContext...")
             castContext = CastContext.getSharedInstance(this)
+            viewModel.appendLog("CastContext initialized.")
         } catch(e: Exception) {
+            viewModel.appendLog("Error initializing CastContext: ${e.message}")
             Log.e("MainActivity", "Error initializing CastContext", e)
         }
 
@@ -73,9 +106,11 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     val trackInfo by viewModel.trackInfo.collectAsState()
                     val isNoStreamMode by viewModel.isNoStreamMode.collectAsState()
+                    val logs by viewModel.logs.collectAsState()
 
                     // Side effect to update Cast when track info changes
                     LaunchedEffect(trackInfo, isNoStreamMode) {
+                        viewModel.appendLog("TrackInfo or NoStreamMode changed. Updating Cast media.")
                         updateCastMedia()
                     }
 
@@ -83,8 +118,10 @@ class MainActivity : AppCompatActivity() {
                         trackInfo = trackInfo,
                         isNoStreamMode = isNoStreamMode,
                         onToggleNoStreamMode = {
+                            viewModel.appendLog("Toggling No-Stream Mode.")
                             viewModel.toggleNoStreamMode()
-                        }
+                        },
+                        logs = logs // Pass logs to the screen
                     )
                 }
             }
@@ -93,24 +130,36 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.appendLog("MainActivity onResume.")
         try {
             castContext.sessionManager.addSessionManagerListener(sessionManagerListener, CastSession::class.java)
             if (castContext.sessionManager.currentCastSession != null) {
                 castSession = castContext.sessionManager.currentCastSession
+                viewModel.appendLog("Existing CastSession found: ${castSession?.castDevice?.friendlyName}")
             }
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) {
+            viewModel.appendLog("Error in onResume adding session listener: ${e.message}")
+            e.printStackTrace()
+        }
     }
 
     override fun onPause() {
         super.onPause()
+        viewModel.appendLog("MainActivity onPause.")
         try {
             castContext.sessionManager.removeSessionManagerListener(sessionManagerListener, CastSession::class.java)
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) {
+            viewModel.appendLog("Error in onPause removing session listener: ${e.message}")
+            e.printStackTrace()
+        }
     }
 
     @Suppress("DEPRECATION")
     private fun updateCastMedia() {
-        if (castSession == null || !castSession!!.isConnected) return
+        if (castSession == null || !castSession!!.isConnected) {
+            viewModel.appendLog("Cannot update Cast media: Not connected to CastSession.")
+            return
+        }
 
         val trackInfo = viewModel.trackInfo.value
         val isNoStreamMode = viewModel.isNoStreamMode.value
@@ -127,9 +176,11 @@ class MainActivity : AppCompatActivity() {
             
             val imageUrl = trackInfo.imageUrl ?: DEFAULT_IMAGE_URL
             metadata.addImage(WebImage(Uri.parse(imageUrl)))
+            viewModel.appendLog("Metadata prepared: ${trackInfo.title} by ${trackInfo.artist}")
         } else {
             metadata.putString(MediaMetadata.KEY_TITLE, "KOZT - The Coast")
             metadata.addImage(WebImage(Uri.parse(DEFAULT_IMAGE_URL)))
+            viewModel.appendLog("Metadata prepared: Default KOZT.")
         }
 
         val mediaInfo = MediaInfo.Builder(streamUrl)
@@ -140,9 +191,10 @@ class MainActivity : AppCompatActivity() {
 
         try {
             val remoteMediaClient = castSession?.remoteMediaClient
-            
+            viewModel.appendLog("Loading media to Cast device: $streamUrl (NoStreamMode: $isNoStreamMode)")
             remoteMediaClient?.load(mediaInfo)
         } catch (e: Exception) {
+            viewModel.appendLog("Error loading media to Cast device: ${e.message}")
             Log.e("MainActivity", "Error loading media", e)
         }
     }
@@ -156,4 +208,3 @@ fun LaunchedEffect(
 ) {
     androidx.compose.runtime.LaunchedEffect(keys = keys, block = block)
 }
-// Force a new commit

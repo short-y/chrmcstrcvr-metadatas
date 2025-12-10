@@ -5,6 +5,8 @@ import androidx.appcompat.R as AppCompatR
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,12 +36,13 @@ import com.google.android.gms.cast.framework.CastButtonFactory
 fun KoztNowPlayingScreen(
     trackInfo: TrackInfo?,
     isNoStreamMode: Boolean,
-    onToggleNoStreamMode: () -> Unit
+    onToggleNoStreamMode: () -> Unit,
+    logs: List<String> // New parameter for debug logs
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("KOZT Now Playing") },
+                title = { Text("Cast KOZT") }, // Changed title
                 actions = {
                     CastButton()
                 }
@@ -118,6 +121,25 @@ fun KoztNowPlayingScreen(
                     onCheckedChange = { onToggleNoStreamMode() },
                     modifier = Modifier.padding(start = 8.dp)
                 )
+            }
+            
+            // Debug Logs Section
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Debug Log:",
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .padding(8.dp)
+            ) {
+                items(logs) { log ->
+                    Text(text = log, color = Color.Green, fontSize = 10.sp)
+                }
             }
         }
     }
