@@ -102,10 +102,12 @@ class MainActivity : AppCompatActivity() {
             }
             permissionsToRequest.add(android.Manifest.permission.BLUETOOTH_SCAN)
             permissionsToRequest.add(android.Manifest.permission.BLUETOOTH_CONNECT)
+        }
+        // Always request Location for older Android versions or robust discovery
+        permissionsToRequest.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
 
-            if (permissionsToRequest.isNotEmpty()) {
-                requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
-            }
+        if (permissionsToRequest.isNotEmpty()) {
+            requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
         }
 
         try {
