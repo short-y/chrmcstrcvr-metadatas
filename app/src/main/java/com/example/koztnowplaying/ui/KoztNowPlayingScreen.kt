@@ -34,9 +34,7 @@ import com.google.android.gms.cast.framework.CastButtonFactory
 fun KoztNowPlayingScreen(
     trackInfo: TrackInfo?,
     isNoStreamMode: Boolean,
-    onToggleNoStreamMode: () -> Unit,
-    onPlayPause: () -> Unit // Note: Actual play/pause might be handled by Cast Controller automatically if we use standard UI, but here we might want custom control or just rely on Cast Dialog
-) {
+    onToggleNoStreamMode: () -> Unit {
     Scaffold(
         topBar = {
             TopAppBar(

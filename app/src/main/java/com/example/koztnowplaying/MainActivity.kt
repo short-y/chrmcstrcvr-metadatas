@@ -84,8 +84,7 @@ class MainActivity : AppCompatActivity() {
                         isNoStreamMode = isNoStreamMode,
                         onToggleNoStreamMode = {
                             viewModel.toggleNoStreamMode()
-                        },
-                        onPlayPause = { /* Handle manual play/pause if needed */ }
+                        }
                     )
                 }
             }
@@ -109,6 +108,7 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) { e.printStackTrace() }
     }
 
+    @Suppress("DEPRECATION")
     private fun updateCastMedia() {
         if (castSession == null || !castSession!!.isConnected) return
 
@@ -140,24 +140,6 @@ class MainActivity : AppCompatActivity() {
 
         try {
             val remoteMediaClient = castSession?.remoteMediaClient
-            
-            // Check if we are already playing the same content to avoid restarting
-            // Note: This is a simplified check. In production, check currently playing item ID or URL.
-            // For now, we just load it if it's a "metadata update" we might want to use load() 
-            // but if the stream is live radio, restarting the stream every 15s is bad.
-            // However, kozt_lite.py uses `play_media` which *restarts* the media or just updates metadata?
-            // `play_media` in pychromecast calls `load` which usually restarts.
-            // The python script: "Updates the metadata... mc.play_media(...)". It seems to restart or reload.
-            // But wait, live radio shouldn't restart.
-            // If the stream URL is the same, we might just want to update metadata?
-            // Android Cast SDK doesn't easily support "update metadata without reloading" for Default Receiver unless we use queue manipulation or custom receiver.
-            // However, the Python script calls `mc.play_media` which sends a LOAD command.
-            // Let's stick to what the script does: it sends a LOAD command.
-            // Wait, does the python script really send LOAD every 15 seconds?
-            // "if song_title != last_title ... update_media_metadata"
-            // Ah, it only updates when track changes!
-            
-            // So we need to track local state of what we last sent to Cast.
             
             remoteMediaClient?.load(mediaInfo)
         } catch (e: Exception) {
