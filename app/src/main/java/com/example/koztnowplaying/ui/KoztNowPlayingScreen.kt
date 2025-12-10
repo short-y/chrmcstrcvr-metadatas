@@ -1,5 +1,7 @@
 package com.example.koztnowplaying.ui
 
+import androidx.appcompat.view.ContextThemeWrapper
+import androidx.appcompat.R as AppCompatR
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -120,10 +122,7 @@ fun KoztNowPlayingScreen(
             }
         }
     }
-}
 
-import androidx.appcompat.view.ContextThemeWrapper
-import androidx.appcompat.R as AppCompatR
 
 @Composable
 fun CastButton() {

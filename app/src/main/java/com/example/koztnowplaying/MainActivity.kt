@@ -167,7 +167,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 // Helper Composable for Side Effects
-@Composable
+@androidx.compose.runtime.Composable
 fun LaunchedEffect(
     vararg keys: Any?,
     block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit
