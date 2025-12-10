@@ -68,11 +68,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val sessionManagerListener = @Suppress("OVERRIDE_DEPRECATION") object : SessionManagerListener<CastSession> {
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun onSessionStarted(session: CastSession, sessionId: String) {
             castSession = session
             viewModel.appendLog("CastSession started: ${session.castDevice?.friendlyName}")
             updateCastMedia()
         }
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {
             castSession = session
             viewModel.appendLog("CastSession resumed: ${session.castDevice?.friendlyName} (wasSuspended: $wasSuspended)")
@@ -155,9 +157,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.mediarouter.media.MediaControlIntent
+
+// ... existing imports ...
+
     override fun onResume() {
         super.onResume()
         viewModel.appendLog("MainActivity onResume.")
+
+        // 1. Explicit Permission Check
+        val locationPermission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+        val bluetoothScanPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            PackageManager.PERMISSION_GRANTED
+        }
+        
+        viewModel.appendLog("Perm Check: Location=${locationPermission == PackageManager.PERMISSION_GRANTED}, BT_Scan=${bluetoothScanPermission == PackageManager.PERMISSION_GRANTED}")
+
         try {
             castContext.sessionManager.addSessionManagerListener(sessionManagerListener, CastSession::class.java)
             if (castContext.sessionManager.currentCastSession != null) {
@@ -165,13 +184,22 @@ class MainActivity : AppCompatActivity() {
                 viewModel.appendLog("Existing CastSession found: ${castSession?.castDevice?.friendlyName}")
             }
             
-            // Register MediaRouter callback
+            // 2. Register MediaRouter callback with BROADENED selector
             if (mediaRouter != null) {
+                // Check existing routes first
+                val existingRoutes = mediaRouter?.routes
+                viewModel.appendLog("Existing routes count: ${existingRoutes?.size ?: 0}")
+                existingRoutes?.forEach { route ->
+                    viewModel.appendLog("Existing route: ${route.name} (${route.id})")
+                }
+
                 val selector = MediaRouteSelector.Builder()
                     .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
+                    .addControlCategory(MediaControlIntent.CATEGORY_LIVE_AUDIO) // Add generic audio to test MediaRouter
+                    .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK) // Add generic remote playback
                     .build()
                 
-                viewModel.appendLog("Registering MediaRouter callback...")
+                viewModel.appendLog("Registering MediaRouter callback with BROADENED selector...")
                 mediaRouter?.addCallback(selector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
             }
         } catch (e: Exception) {
