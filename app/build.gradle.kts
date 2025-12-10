@@ -5,6 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.castkozt"
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.castkozt"
