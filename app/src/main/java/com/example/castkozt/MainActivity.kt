@@ -206,7 +206,6 @@ class MainActivity : AppCompatActivity() {
 
                 val selector = MediaRouteSelector.Builder()
                     .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
-                    .addControlCategory(CastMediaControlIntent.CATEGORY_CAST) // Broaden for any Cast device
                     .addControlCategory(MediaControlIntent.CATEGORY_LIVE_AUDIO) // Add generic audio to test MediaRouter
                     .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK) // Add generic remote playback
                     .build()
