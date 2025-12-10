@@ -15,10 +15,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.mediarouter.media.MediaRouteSelector
+import androidx.mediarouter.media.MediaRouter
 import com.example.castkozt.data.TrackInfo
 import com.example.castkozt.ui.KoztNowPlayingScreen
 import com.example.castkozt.ui.MainViewModel
 import com.example.castkozt.ui.theme.KoztNowPlayingTheme
+import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaMetadata
 import com.google.android.gms.cast.framework.CastContext
@@ -34,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private var castSession: CastSession? = null
     private lateinit var castContext: CastContext
+    private var mediaRouter: MediaRouter? = null
     private var updateJob: Job? = null
 
     // Constants from python script
@@ -47,6 +51,21 @@ class MainActivity : AppCompatActivity() {
                 viewModel.appendLog("Permission '${it.key}' granted: ${it.value}")
             }
         }
+
+    private val mediaRouterCallback = object : MediaRouter.Callback() {
+        override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) {
+            viewModel.appendLog("Route added: ${route.name} (${route.id})")
+        }
+        override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) {
+            viewModel.appendLog("Route removed: ${route.name}")
+        }
+        override fun onRouteSelected(router: MediaRouter, route: MediaRouter.RouteInfo) {
+            viewModel.appendLog("Route selected: ${route.name}")
+        }
+        override fun onRouteUnselected(router: MediaRouter, route: MediaRouter.RouteInfo) {
+            viewModel.appendLog("Route unselected: ${route.name}")
+        }
+    }
 
     private val sessionManagerListener = object : SessionManagerListener<CastSession> {
         override fun onSessionStarted(session: CastSession, sessionId: String) {
@@ -93,8 +112,12 @@ class MainActivity : AppCompatActivity() {
             viewModel.appendLog("Initializing CastContext...")
             castContext = CastContext.getSharedInstance(this)
             viewModel.appendLog("CastContext initialized.")
+            
+            // Initialize MediaRouter
+            mediaRouter = MediaRouter.getInstance(this)
+            
         } catch(e: Exception) {
-            viewModel.appendLog("Error initializing CastContext: ${e.message}")
+            viewModel.appendLog("Error initializing Cast/MediaRouter: ${e.message}")
             Log.e("MainActivity", "Error initializing CastContext", e)
         }
 
@@ -137,8 +160,18 @@ class MainActivity : AppCompatActivity() {
                 castSession = castContext.sessionManager.currentCastSession
                 viewModel.appendLog("Existing CastSession found: ${castSession?.castDevice?.friendlyName}")
             }
+            
+            // Register MediaRouter callback
+            if (mediaRouter != null) {
+                val selector = MediaRouteSelector.Builder()
+                    .addControlCategory(CastMediaControlIntent.categoryForCast(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
+                    .build()
+                
+                viewModel.appendLog("Registering MediaRouter callback...")
+                mediaRouter?.addCallback(selector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
+            }
         } catch (e: Exception) {
-            viewModel.appendLog("Error in onResume adding session listener: ${e.message}")
+            viewModel.appendLog("Error in onResume adding listeners: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -148,8 +181,9 @@ class MainActivity : AppCompatActivity() {
         viewModel.appendLog("MainActivity onPause.")
         try {
             castContext.sessionManager.removeSessionManagerListener(sessionManagerListener, CastSession::class.java)
+            mediaRouter?.removeCallback(mediaRouterCallback)
         } catch (e: Exception) {
-            viewModel.appendLog("Error in onPause removing session listener: ${e.message}")
+            viewModel.appendLog("Error in onPause removing listeners: ${e.message}")
             e.printStackTrace()
         }
     }
