@@ -4,11 +4,10 @@ plugins {
 }
 
 android {
-    namespace = "com.example.koztnowplaying"
-    compileSdk = 34
+    namespace = "com.example.castkozt"
 
     defaultConfig {
-        applicationId = "com.example.koztnowplaying"
+        applicationId = "com.example.castkozt"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
