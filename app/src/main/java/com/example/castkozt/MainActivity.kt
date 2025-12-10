@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val sessionManagerListener = object : SessionManagerListener<CastSession> {
+    private val sessionManagerListener = @Suppress("OVERRIDE_DEPRECATION") object : SessionManagerListener<CastSession> {
         override fun onSessionStarted(session: CastSession, sessionId: String) {
             castSession = session
             viewModel.appendLog("CastSession started: ${session.castDevice?.friendlyName}")
@@ -106,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         }
         // Always request Location for older Android versions or robust discovery
         permissionsToRequest.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        permissionsToRequest.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
 
         if (permissionsToRequest.isNotEmpty()) {
             requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
