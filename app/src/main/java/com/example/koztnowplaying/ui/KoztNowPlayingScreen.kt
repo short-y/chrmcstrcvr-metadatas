@@ -34,7 +34,8 @@ import com.google.android.gms.cast.framework.CastButtonFactory
 fun KoztNowPlayingScreen(
     trackInfo: TrackInfo?,
     isNoStreamMode: Boolean,
-    onToggleNoStreamMode: () -> Unit {
+    onToggleNoStreamMode: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
