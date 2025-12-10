@@ -17,6 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
+import androidx.mediarouter.media.MediaControlIntent
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import com.example.castkozt.data.TrackInfo
 import com.example.castkozt.ui.KoztNowPlayingScreen
 import com.example.castkozt.ui.MainViewModel
@@ -156,12 +159,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
-import androidx.mediarouter.media.MediaControlIntent
-
-// ... existing imports ...
 
     override fun onResume() {
         super.onResume()
