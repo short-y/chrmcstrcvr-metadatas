@@ -73,13 +73,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private val sessionManagerListener = object : SessionManagerListener<CastSession> {
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun onSessionStarted(session: CastSession, sessionId: String) {
             castSession = session
             viewModel.appendLog("CastSession started: ${session.castDevice?.friendlyName}")
             updateCastMedia()
         }
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {
             castSession = session
             viewModel.appendLog("CastSession resumed: ${session.castDevice?.friendlyName} (wasSuspended: $wasSuspended)")
