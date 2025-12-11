@@ -47,8 +47,8 @@ class MainActivity : AppCompatActivity() {
     private var updateJob: Job? = null
 
     // Constants from python script
-    private val DEFAULT_STREAM_URL = "http://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u"
-    private val SILENT_STREAM_URL = "https://github.com/anars/blank-audio/blob/master/10-minutes-of-silence.mp3?raw=true"
+    private val DEFAULT_STREAM_URL = "https://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u"
+    private val SILENT_STREAM_URL = "https://raw.githubusercontent.com/anars/blank-audio/master/10-minutes-of-silence.mp3"
     private val DEFAULT_IMAGE_URL = "https://kozt.com/wp-content/uploads/KOZT-Logo-No-Tag.png"
     
     private val requestPermissionLauncher: ActivityResultLauncher<Array<String>> =
