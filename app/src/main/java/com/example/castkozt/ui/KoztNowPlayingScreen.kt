@@ -1,3 +1,5 @@
+package com.example.castkozt.ui
+
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.R as AppCompatR
 import androidx.compose.foundation.Image
