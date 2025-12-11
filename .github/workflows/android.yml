@@ -25,10 +25,10 @@ jobs:
         gradle-version: '8.5'
 
     - name: Build with Gradle
-      run: gradle assembleRelease
+      run: gradle bundleRelease
 
-    - name: Upload Release APK
+    - name: Upload Release Bundle
       uses: actions/upload-artifact@v4
       with:
-        name: Cast-KOZT-Release
-        path: app/build/outputs/apk/release/app-release.apk
+        name: Cast-KOZT-Bundle
+        path: app/build/outputs/bundle/release/app-release.aab
