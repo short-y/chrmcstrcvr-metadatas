@@ -150,6 +150,9 @@ fun KoztNowPlayingScreen(
 @Composable
 fun CastButton() {
     AndroidView(
+        modifier = Modifier
+            .size(48.dp) // Ensure explicit size
+            .background(Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(24.dp)), // Visible touch target
         factory = { context ->
             val contextWrapper = ContextThemeWrapper(context, AppCompatR.style.Theme_AppCompat_Light_DarkActionBar) // Use this theme for a dark icon
             MediaRouteButton(contextWrapper).apply {
@@ -161,6 +164,9 @@ fun CastButton() {
                     .addControlCategory("com.google.android.gms.cast.CATEGORY_CAST")
                     .build()
                 this.routeSelector = selector
+                
+                // FORCE VISIBILITY even if it thinks no devices are found
+                this.setAlwaysVisible(true)
             }
         }
     )
