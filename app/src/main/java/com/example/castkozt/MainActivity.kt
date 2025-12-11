@@ -251,7 +251,8 @@ class MainActivity : AppCompatActivity() {
         val isNoStreamMode = viewModel.isNoStreamMode.value
 
         val streamUrl = if (isNoStreamMode) SILENT_STREAM_URL else DEFAULT_STREAM_URL
-        val contentType = "audio/mp3"
+        val contentType = if (isNoStreamMode) "audio/mp3" else "audio/x-mpegurl"
+        val streamType = if (isNoStreamMode) MediaInfo.STREAM_TYPE_BUFFERED else MediaInfo.STREAM_TYPE_LIVE
 
         val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK)
         
@@ -270,7 +271,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val mediaInfo = MediaInfo.Builder(streamUrl)
-            .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+            .setStreamType(streamType)
             .setContentType(contentType)
             .setMetadata(metadata)
             .build()
