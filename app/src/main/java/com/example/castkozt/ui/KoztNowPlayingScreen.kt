@@ -149,9 +149,16 @@ fun KoztNowPlayingScreen(
 fun CastButton() {
     AndroidView(
         factory = { context ->
-            val contextWrapper = ContextThemeWrapper(context, AppCompatR.style.Theme_AppCompat_Light_DarkActionBar)
+            val contextWrapper = ContextThemeWrapper(context, AppCompatR.style.Theme_AppCompat_Light_DarkActionBar) // Use this theme for a dark icon
             MediaRouteButton(contextWrapper).apply {
                 CastButtonFactory.setUpMediaRouteButton(context.applicationContext, this)
+                
+                // Manually broaden the selector to ensure it shows for ANY Cast device
+                val selector = androidx.mediarouter.media.MediaRouteSelector.Builder()
+                    .addControlCategory(com.google.android.gms.cast.CastMediaControlIntent.categoryForCast(com.google.android.gms.cast.CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID))
+                    .addControlCategory("com.google.android.gms.cast.CATEGORY_CAST")
+                    .build()
+                this.routeSelector = selector
             }
         }
     )
