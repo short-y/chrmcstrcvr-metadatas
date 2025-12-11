@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     private var updateJob: Job? = null
 
     // Constants from python script
-    private val DEFAULT_STREAM_URL = "https://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u"
+    // DEFAULT_STREAM_URL moved to ViewModel
     private val SILENT_STREAM_URL = "https://raw.githubusercontent.com/anars/blank-audio/master/10-minutes-of-silence.mp3"
     private val DEFAULT_IMAGE_URL = "https://kozt.com/wp-content/uploads/KOZT-Logo-No-Tag.png"
     
@@ -141,11 +141,12 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     val trackInfo by viewModel.trackInfo.collectAsState()
                     val isNoStreamMode by viewModel.isNoStreamMode.collectAsState()
+                    val resolvedStreamUrl by viewModel.resolvedStreamUrl.collectAsState()
                     val logs by viewModel.logs.collectAsState()
 
                     // Side effect to update Cast when track info changes
-                    LaunchedEffect(trackInfo, isNoStreamMode) {
-                        viewModel.appendLog("TrackInfo or NoStreamMode changed. Updating Cast media.")
+                    LaunchedEffect(trackInfo, isNoStreamMode, resolvedStreamUrl) {
+                        viewModel.appendLog("TrackInfo, NoStreamMode, or StreamURL changed. Updating Cast media.")
                         updateCastMedia()
                     }
 
@@ -249,10 +250,17 @@ class MainActivity : AppCompatActivity() {
 
         val trackInfo = viewModel.trackInfo.value
         val isNoStreamMode = viewModel.isNoStreamMode.value
+        val resolvedStream = viewModel.resolvedStreamUrl.value
 
-        val streamUrl = if (isNoStreamMode) SILENT_STREAM_URL else DEFAULT_STREAM_URL
-        val contentType = if (isNoStreamMode) "audio/mp3" else "audio/x-mpegurl"
-        val streamType = if (isNoStreamMode) MediaInfo.STREAM_TYPE_BUFFERED else MediaInfo.STREAM_TYPE_LIVE
+        if (resolvedStream == null && !isNoStreamMode) {
+             viewModel.appendLog("Cannot update Cast media: Stream URL not yet resolved.")
+             return
+        }
+
+        val streamUrl = if (isNoStreamMode) SILENT_STREAM_URL else resolvedStream!!
+        // Use generic audio content type for direct stream, mp3 for silent
+        val contentType = if (isNoStreamMode) "audio/mp3" else "audio/aac" 
+        val streamType = MediaInfo.STREAM_TYPE_BUFFERED
 
         val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK)
         

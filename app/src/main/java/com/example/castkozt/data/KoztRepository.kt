@@ -1,6 +1,9 @@
 package com.example.castkozt.data
 
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
 
 data class TrackInfo(
     val title: String,
@@ -12,6 +15,19 @@ data class TrackInfo(
 class KoztRepository {
     private val koztService = NetworkModule.koztService
     private val iTunesService = NetworkModule.iTunesService
+
+    suspend fun resolveStreamUrl(m3uUrl: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val content = URL(m3uUrl).readText()
+                // Find first line starting with http
+                content.lines().firstOrNull { it.trim().startsWith("http") }?.trim()
+            } catch (e: Exception) {
+                Log.e("KoztRepository", "Error resolving stream URL", e)
+                null
+            }
+        }
+    }
 
     suspend fun fetchNowPlaying(): TrackInfo? {
         try {

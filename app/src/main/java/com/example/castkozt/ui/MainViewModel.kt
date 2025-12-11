@@ -28,12 +28,33 @@ class MainViewModel : ViewModel() {
     private val _logs = MutableStateFlow<List<String>>(emptyList())
     val logs: StateFlow<List<String>> = _logs.asStateFlow()
 
+    private val _resolvedStreamUrl = MutableStateFlow<String?>(null)
+    val resolvedStreamUrl: StateFlow<String?> = _resolvedStreamUrl.asStateFlow()
+
     private val logDateFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
     private val MAX_LOG_LINES = 50
+
+    // Constants
+    private val DEFAULT_STREAM_URL = "https://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u"
 
     init {
         appendLog("ViewModel initialized.")
         startPolling()
+        resolveStream()
+    }
+
+    private fun resolveStream() {
+        viewModelScope.launch {
+            appendLog("Resolving stream URL from M3U...")
+            val resolved = repository.resolveStreamUrl(DEFAULT_STREAM_URL)
+            if (resolved != null) {
+                _resolvedStreamUrl.value = resolved
+                appendLog("Stream resolved: $resolved")
+            } else {
+                appendLog("Failed to resolve stream URL. Using default.")
+                _resolvedStreamUrl.value = DEFAULT_STREAM_URL // Fallback
+            }
+        }
     }
 
     fun appendLog(message: String) {
