@@ -39,7 +39,8 @@ fun KoztNowPlayingScreen(
     trackInfo: TrackInfo?,
     isNoStreamMode: Boolean,
     onToggleNoStreamMode: () -> Unit,
-    logs: List<String> // New parameter for debug logs
+    logs: List<String>, // New parameter for debug logs
+    versionName: String // New parameter for app version
 ) {
     Scaffold(
         topBar = {
@@ -156,6 +157,16 @@ fun KoztNowPlayingScreen(
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.weight(1f)) // Push version to bottom
+            
+            // Version Info
+            Text(
+                text = "v$versionName",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

@@ -158,7 +158,8 @@ class MainActivity : AppCompatActivity() {
                             viewModel.appendLog("Toggling No-Stream Mode.")
                             viewModel.toggleNoStreamMode()
                         },
-                        logs = logs // Pass logs to the screen
+                        logs = logs, // Pass logs to the screen
+                        versionName = BuildConfig.VERSION_NAME
                     )
                 }
             }
