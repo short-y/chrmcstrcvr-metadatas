@@ -179,6 +179,7 @@ fun CastButton() {
                 this.routeSelector = selector
                 
                 // FORCE VISIBILITY even if it thinks no devices are found
+                @Suppress("DEPRECATION")
                 this.setAlwaysVisible(true)
             }
         }

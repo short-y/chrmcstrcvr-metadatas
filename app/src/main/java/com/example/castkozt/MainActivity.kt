@@ -74,12 +74,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val sessionManagerListener = @Suppress("OVERRIDE_DEPRECATION") object : SessionManagerListener<CastSession> {
+        @Deprecated("Deprecated in Cast SDK, but still used for compatibility")
         @Suppress("OVERRIDE_DEPRECATION")
         override fun onSessionStarted(session: CastSession, sessionId: String) {
             castSession = session
             viewModel.appendLog("CastSession started: ${session.castDevice?.friendlyName}")
             updateCastMedia()
         }
+        @Deprecated("Deprecated in Cast SDK, but still used for compatibility")
         @Suppress("OVERRIDE_DEPRECATION")
         override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {
             castSession = session
