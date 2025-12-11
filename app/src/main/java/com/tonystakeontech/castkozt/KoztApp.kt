@@ -1,4 +1,4 @@
-package com.example.castkozt
+package com.tonystakeontech.castkozt
 
 import android.app.Application
 import com.google.android.gms.cast.framework.CastContext

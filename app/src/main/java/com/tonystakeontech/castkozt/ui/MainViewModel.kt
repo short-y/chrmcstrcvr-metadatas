@@ -1,9 +1,9 @@
-package com.example.castkozt.ui
+package com.tonystakeontech.castkozt.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.castkozt.data.KoztRepository
-import com.example.castkozt.data.TrackInfo
+import com.tonystakeontech.castkozt.data.KoztRepository
+import com.tonystakeontech.castkozt.data.TrackInfo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

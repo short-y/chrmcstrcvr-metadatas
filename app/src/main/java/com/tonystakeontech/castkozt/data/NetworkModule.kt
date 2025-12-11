@@ -1,7 +1,7 @@
-package com.example.castkozt.data
+package com.tonystakeontech.castkozt.data
 
-import com.example.castkozt.network.ITunesApiService
-import com.example.castkozt.network.KoztApiService
+import com.tonystakeontech.castkozt.network.ITunesApiService
+import com.tonystakeontech.castkozt.network.KoztApiService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 

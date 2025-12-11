@@ -1,4 +1,4 @@
-package com.example.castkozt.network
+package com.tonystakeontech.castkozt.network
 
 import retrofit2.http.GET
 import retrofit2.http.Query

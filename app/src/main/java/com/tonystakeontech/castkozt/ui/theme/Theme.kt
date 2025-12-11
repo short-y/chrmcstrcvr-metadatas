@@ -1,4 +1,4 @@
-package com.example.castkozt.ui.theme
+package com.tonystakeontech.castkozt.ui.theme
 
 import android.app.Activity
 import android.os.Build

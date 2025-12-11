@@ -1,4 +1,4 @@
-package com.example.castkozt.ui
+package com.tonystakeontech.castkozt.ui
 
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.R as AppCompatR
@@ -27,8 +27,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.mediarouter.app.MediaRouteButton
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.castkozt.R
-import com.example.castkozt.data.TrackInfo
+import com.tonystakeontech.castkozt.R
+import com.tonystakeontech.castkozt.data.TrackInfo
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.gms.cast.CastMediaControlIntent // Keep this as it's used in the selector
 

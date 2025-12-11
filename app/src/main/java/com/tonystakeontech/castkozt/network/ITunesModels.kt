@@ -1,4 +1,4 @@
-package com.example.castkozt.network
+package com.tonystakeontech.castkozt.network
 
 import com.google.gson.annotations.SerializedName
 

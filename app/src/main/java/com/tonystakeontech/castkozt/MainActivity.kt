@@ -1,4 +1,4 @@
-package com.example.castkozt
+package com.tonystakeontech.castkozt
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -22,10 +22,10 @@ import androidx.core.content.ContextCompat
 import androidx.mediarouter.media.MediaControlIntent
 import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
-import com.example.castkozt.data.TrackInfo
-import com.example.castkozt.ui.KoztNowPlayingScreen
-import com.example.castkozt.ui.MainViewModel
-import com.example.castkozt.ui.theme.KoztNowPlayingTheme
+import com.tonystakeontech.castkozt.data.TrackInfo
+import com.tonystakeontech.castkozt.ui.KoztNowPlayingScreen
+import com.tonystakeontech.castkozt.ui.MainViewModel
+import com.tonystakeontech.castkozt.ui.theme.KoztNowPlayingTheme
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaMetadata

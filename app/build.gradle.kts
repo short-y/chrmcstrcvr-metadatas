@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.castkozt"
+    namespace = "com.tonystakeontech.castkozt"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.castkozt"
+        applicationId = "com.tonystakeontech.castkozt"
         minSdk = 24
         targetSdk = 34
         versionCode = 2
