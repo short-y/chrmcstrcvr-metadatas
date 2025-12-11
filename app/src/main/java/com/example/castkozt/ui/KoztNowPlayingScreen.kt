@@ -125,22 +125,35 @@ fun KoztNowPlayingScreen(
                 )
             }
             
+            // Debug Logs Toggle
+            var showLogs by remember { mutableStateOf(false) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Show Debug Logs")
+                Switch(
+                    checked = showLogs,
+                    onCheckedChange = { showLogs = it },
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+
             // Debug Logs Section
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Debug Log:",
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Start)
-            )
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .background(Color.Black.copy(alpha = 0.8f))
-                    .padding(8.dp)
-            ) {
-                items(logs) { log ->
-                    Text(text = log, color = Color.Green, fontSize = 10.sp)
+            if (showLogs) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Debug Log:",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .background(Color.Black.copy(alpha = 0.8f))
+                        .padding(8.dp)
+                ) {
+                    items(logs) { log ->
+                        Text(text = log, color = Color.Green, fontSize = 10.sp)
+                    }
                 }
             }
         }
