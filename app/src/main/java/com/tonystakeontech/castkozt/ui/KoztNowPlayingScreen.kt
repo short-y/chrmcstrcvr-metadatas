@@ -118,7 +118,7 @@ fun KoztNowPlayingScreen(
 
             // Controls
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("No-Stream Mode (Metadata Only)")
+                Text("Display Song Info Only (No Sound)")
                 Switch(
                     checked = isNoStreamMode,
                     onCheckedChange = { onToggleNoStreamMode() },
