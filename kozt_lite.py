@@ -331,7 +331,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Play KOZT Radio on Default Chromecast Receiver.")
     parser.add_argument("device_name", help="The friendly name of the Chromecast")
-    parser.add_argument("-ns", "--no-stream", action="store_true", help="Display metadata only (play silent audio)")
+    parser.add_argument("-ns", "--no-stream", action="store_true", help="Display song information on your screen without playing any sound.")
     
     args = parser.parse_args()
     

@@ -386,7 +386,7 @@ def play_radio(device_name, stream_url, stream_type, title, image_url, app_id=No
     else:
         print("Mode: No-Stream. Skipping playback request. Displaying metadata only.")
         if not app_id:
-            print("WARNING: --no-stream (or -ns) used without --app_id. The Default Media Receiver will not launch, and custom metadata will not be displayed.")
+            print("WARNING: You've used the 'display song information without sound' option (--no-stream or -ns) but haven't specified an app to display it on (--app_id). As a result, your Cast device won't show the song information.")
             # We explicitly don't exit here to allow sending custom messages
             # if the user just wants to see logs or an app is launched manually.
     
@@ -562,7 +562,7 @@ if __name__ == "__main__":
     parser.add_argument("--app_id", default=None, help="Custom Receiver App ID (Register at cast.google.com/publish)")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     parser.add_argument("--kozt", action="store_true", help="Force KOZT metadata scraping, even if URL doesn't contain 'kozt'")
-    parser.add_argument("-ns", "--no-stream", action="store_true", help="Launch app and update metadata, but do not play audio stream")
+    parser.add_argument("-ns", "--no-stream", action="store_true", help="Launch the app and show song information on your screen, but keep the audio silent.")
     
     args = parser.parse_args()
     

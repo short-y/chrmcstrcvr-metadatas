@@ -694,7 +694,7 @@ if __name__ == "__main__":
     # KOZT is enabled by default now. Use --no-kozt to disable.
     parser.add_argument("--no-kozt", action="store_false", dest="kozt", help="Disable KOZT metadata scraping")
     parser.set_defaults(kozt=True)
-    parser.add_argument("-ns", "--no-stream", action="store_true", help="Launch app and update metadata, but do not play audio stream")
+    parser.add_argument("-ns", "--no-stream", action="store_true", help="Launch the app and show song information on your screen, but keep the audio silent.")
     
     args = parser.parse_args()
     
