@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.tonystakeontech.castkozt"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.tonystakeontech.castkozt"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 4
         versionName = "1.3"
 
