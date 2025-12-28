@@ -16,6 +16,16 @@ Documents the cleanup improvements made to `kozt_lite.py` to fix PyInstaller `--
 ### play_kozt_fixes.md
 Documents the same cleanup improvements applied to `play_kozt.py` (the custom receiver version). The fixes are identical to `kozt_lite.py` but work alongside the additional custom receiver features.
 
+### custom_receiver_testing.md
+Comprehensive browser-based testing results for the custom HTML5 receiver (v5.26) at https://short-y.github.io/chrmcstrcvr-metadatas/index.html. Documents UI functionality, JavaScript testing, Cast framework integration, PING/PONG keepalive system, and production readiness verification.
+
+**Key Findings:**
+- All UI components working correctly (metadata display, album art, time conversion)
+- PING/PONG keepalive system verified
+- Bug documented: `updateUI()` must be called with individual parameters, not an object
+- WebSocket errors expected when testing without sender connection
+- Production-ready status confirmed
+
 ## Documentation Guidelines
 
 When making significant changes to the codebase:
