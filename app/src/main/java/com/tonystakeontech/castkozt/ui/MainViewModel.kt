@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tonystakeontech.castkozt.data.KoztRepository
 import com.tonystakeontech.castkozt.data.TrackInfo
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -37,6 +39,10 @@ class MainViewModel : ViewModel() {
     // Constants
     private val DEFAULT_STREAM_URL = "https://live.amperwave.net/playlist/caradio-koztfmaac-ibc3.m3u"
 
+    // Track polling job for explicit cleanup
+    private var pollingJob: Job? = null
+    private var streamResolveJob: Job? = null
+
     init {
         appendLog("ViewModel initialized.")
         startPolling()
@@ -44,7 +50,7 @@ class MainViewModel : ViewModel() {
     }
 
     private fun resolveStream() {
-        viewModelScope.launch {
+        streamResolveJob = viewModelScope.launch {
             appendLog("Resolving stream URL from M3U...")
             val resolved = repository.resolveStreamUrl(DEFAULT_STREAM_URL)
             if (resolved != null) {
@@ -66,19 +72,29 @@ class MainViewModel : ViewModel() {
     }
 
     private fun startPolling() {
-        viewModelScope.launch {
+        pollingJob = viewModelScope.launch {
             appendLog("Starting data polling.")
-            while (true) {
-                appendLog("Fetching now playing data...")
-                val info = repository.fetchNowPlaying()
-                if (info != null) {
-                    _trackInfo.value = info
-                    appendLog("Fetched: ${info.title} - ${info.artist}")
-                } else {
-                    appendLog("No new track info.")
+            while (isActive) { // Check if coroutine is still active
+                try {
+                    appendLog("Fetching now playing data...")
+                    val info = repository.fetchNowPlaying()
+                    if (info != null) {
+                        _trackInfo.value = info
+                        appendLog("Fetched: ${info.title} - ${info.artist}")
+                    } else {
+                        appendLog("No new track info.")
+                    }
+                    delay(15000) // Poll every 15 seconds
+                } catch (e: Exception) {
+                    if (isActive) {
+                        appendLog("Error in polling: ${e.message}")
+                    } else {
+                        appendLog("Polling cancelled.")
+                        break
+                    }
                 }
-                delay(15000) // Poll every 15 seconds
             }
+            appendLog("Polling loop ended.")
         }
     }
     
@@ -88,5 +104,20 @@ class MainViewModel : ViewModel() {
 
     fun toggleNoStreamMode() {
         _isNoStreamMode.value = !_isNoStreamMode.value
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        appendLog("ViewModel onCleared - cancelling background jobs.")
+
+        // Cancel polling job
+        pollingJob?.cancel()
+        pollingJob = null
+
+        // Cancel stream resolve job
+        streamResolveJob?.cancel()
+        streamResolveJob = null
+
+        appendLog("ViewModel cleanup complete.")
     }
 }

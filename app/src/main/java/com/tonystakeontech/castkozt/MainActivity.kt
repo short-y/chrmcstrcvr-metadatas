@@ -166,11 +166,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        viewModel.appendLog("MainActivity onResume.")
+    override fun onStart() {
+        super.onStart()
+        viewModel.appendLog("MainActivity onStart.")
 
-        // Acquire Multicast Lock
+        // Acquire Multicast Lock when app becomes visible
         try {
             val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             multicastLock = wifi.createMulticastLock("multicastLock")
@@ -181,24 +181,15 @@ class MainActivity : AppCompatActivity() {
             viewModel.appendLog("Error acquiring MulticastLock: ${e.message}")
         }
 
-        // 1. Explicit Permission Check
-        val locationPermission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-        val bluetoothScanPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_SCAN)
-        } else {
-            PackageManager.PERMISSION_GRANTED
-        }
-        
-        viewModel.appendLog("Perm Check: Location=${locationPermission == PackageManager.PERMISSION_GRANTED}, BT_Scan=${bluetoothScanPermission == PackageManager.PERMISSION_GRANTED}")
-
+        // Add session listeners when app becomes visible
         try {
             castContext.sessionManager.addSessionManagerListener(sessionManagerListener, CastSession::class.java)
             if (castContext.sessionManager.currentCastSession != null) {
                 castSession = castContext.sessionManager.currentCastSession
                 viewModel.appendLog("Existing CastSession found: ${castSession?.castDevice?.friendlyName}")
             }
-            
-            // 2. Register MediaRouter callback with BROADENED selector
+
+            // Register MediaRouter callback with BROADENED selector
             if (mediaRouter != null) {
                 // Check existing routes first
                 val existingRoutes = mediaRouter?.routes
@@ -213,34 +204,98 @@ class MainActivity : AppCompatActivity() {
                     .addControlCategory(MediaControlIntent.CATEGORY_LIVE_AUDIO)
                     .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
                     .build()
-                
+
                 viewModel.appendLog("Registering MediaRouter callback with BROADENED selector...")
                 mediaRouter?.addCallback(selector, mediaRouterCallback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
             }
         } catch (e: Exception) {
-            viewModel.appendLog("Error in onResume adding listeners: ${e.message}")
+            viewModel.appendLog("Error in onStart adding listeners: ${e.message}")
             e.printStackTrace()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.appendLog("MainActivity onResume.")
+
+        // Explicit Permission Check (for logging/debugging purposes)
+        val locationPermission = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+        val bluetoothScanPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            PackageManager.PERMISSION_GRANTED
+        }
+
+        viewModel.appendLog("Perm Check: Location=${locationPermission == PackageManager.PERMISSION_GRANTED}, BT_Scan=${bluetoothScanPermission == PackageManager.PERMISSION_GRANTED}")
     }
 
     override fun onPause() {
         super.onPause()
         viewModel.appendLog("MainActivity onPause.")
-        
+    }
+
+    override fun onStop() {
+        super.onStop()
+        viewModel.appendLog("MainActivity onStop.")
+
+        // Release MulticastLock when app is no longer visible
+        // This preserves it when HOME is pressed (app goes to background)
         try {
-            multicastLock?.release()
-            viewModel.appendLog("MulticastLock released.")
+            if (multicastLock?.isHeld == true) {
+                multicastLock?.release()
+                viewModel.appendLog("MulticastLock released.")
+            }
         } catch (e: Exception) {
-            // Ignore release errors
+            viewModel.appendLog("Error releasing MulticastLock: ${e.message}")
         }
 
+        // Remove listeners when app is no longer visible
         try {
             castContext.sessionManager.removeSessionManagerListener(sessionManagerListener, CastSession::class.java)
             mediaRouter?.removeCallback(mediaRouterCallback)
+            viewModel.appendLog("Removed Cast and MediaRouter listeners.")
         } catch (e: Exception) {
-            viewModel.appendLog("Error in onPause removing listeners: ${e.message}")
+            viewModel.appendLog("Error in onStop removing listeners: ${e.message}")
             e.printStackTrace()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        viewModel.appendLog("MainActivity onDestroy - performing final cleanup.")
+
+        // Stop Cast session if active
+        try {
+            if (castSession != null && castSession!!.isConnected) {
+                viewModel.appendLog("Stopping active Cast session...")
+                castSession?.remoteMediaClient?.stop()
+                castContext.sessionManager.endCurrentSession(true)
+            }
+        } catch (e: Exception) {
+            viewModel.appendLog("Error stopping Cast session: ${e.message}")
+            e.printStackTrace()
+        }
+
+        // Ensure MulticastLock is released
+        try {
+            if (multicastLock?.isHeld == true) {
+                multicastLock?.release()
+                viewModel.appendLog("MulticastLock released in onDestroy.")
+            }
+            multicastLock = null
+        } catch (e: Exception) {
+            viewModel.appendLog("Error releasing MulticastLock in onDestroy: ${e.message}")
+        }
+
+        // Cancel any ongoing update jobs
+        updateJob?.cancel()
+        updateJob = null
+
+        // Clear references
+        castSession = null
+        mediaRouter = null
+
+        viewModel.appendLog("MainActivity destroyed - all resources released.")
     }
 
     @Suppress("DEPRECATION")
