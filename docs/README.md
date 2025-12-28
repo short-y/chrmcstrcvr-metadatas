@@ -26,6 +26,17 @@ Comprehensive browser-based testing results for the custom HTML5 receiver (v5.26
 - WebSocket errors expected when testing without sender connection
 - Production-ready status confirmed
 
+### android_app_default_receiver.md
+Analysis of the Android app (v1.6) functionality when using the Google Default Media Receiver. Documents architecture, data flow, metadata transmission, lifecycle management, and comparison with custom receiver.
+
+**Key Points:**
+- Uses `DEFAULT_MEDIA_RECEIVER_APPLICATION_ID` (no registration needed)
+- Sends standard Cast metadata via `remoteMediaClient.load()`
+- Polls Amperwave API every 15 seconds for metadata updates
+- Proper lifecycle management in v1.6 (onStart/onStop/onDestroy)
+- Supports no-stream mode for smart displays
+- Production-ready for Play Store release
+
 ## Documentation Guidelines
 
 When making significant changes to the codebase:
